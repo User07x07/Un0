@@ -14,7 +14,7 @@ Feature	Description<br>
 🚀 Quick Start<br>
 🔧 Requirements<br>
 Windows 10/11 (64-bit)<br>
-.NET 6.0 Runtime1<br>
+.NET 8.0 Runtime1<br>
 WebView2 Runtime<br>
 
 # Publish as a single executable<br>
