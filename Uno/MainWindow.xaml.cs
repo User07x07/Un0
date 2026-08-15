@@ -1,0 +1,556 @@
+﻿using Microsoft.Web.WebView2.Core;
+using Microsoft.Web.WebView2.Wpf;
+using System;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Input;
+using System.Windows.Media;
+
+namespace Uno
+{
+    public partial class MainWindow : Window
+    {
+        private int adBlockCounter = 0;
+        private string currentUrl = "";
+        private bool isAuthenticated = false;
+        private bool isVideoFullscreen = false;
+        private bool isFullscreenMode = false;
+
+        private string adBlockScript = @"
+            (function() {
+                let adCount = 0;
+
+                function incrementAdCounter() {
+                    adCount++;
+                    try {
+                        window.chrome.webview.postMessage('ad_blocked_' + adCount);
+                    } catch(e) {}
+                }
+
+                const originalOpen = window.open;
+                window.open = function(url, name, features) {
+                    if (url && (url.includes('accounts.google.com') || 
+                                url.includes('googleapis.com') || 
+                                url.includes('google.com'))) {
+                        return originalOpen.call(window, url, name, features);
+                    }
+                    incrementAdCounter();
+                    return null;
+                };
+
+                function removeAds() {
+                    let removed = 0;
+                    const selectors = [
+                        '.ytp-ad-module', '.ytp-ad-player-overlay', '.video-ads',
+                        '.ad-container', '.ad-showing', '[id*=""google_ads""]',
+                        '[id*=""ad-container""]', '[id*=""popup""]', '[id*=""modal""]',
+                        '[id*=""overlay""]', '.advertisement', '.adsbygoogle',
+                        '[class*=""ad-""]', '[class*=""_ad_""]', '[class*=""popup""]',
+                        '[class*=""modal""]', '[class*=""overlay""]', '.game_area_purchase',
+                        '.game_purchase_action', '.game_area_bubble',
+                        '[class*=""newsletter""]', '[id*=""newsletter""]'
+                    ];
+                    selectors.forEach(selector => {
+                        document.querySelectorAll(selector).forEach(el => {
+                            el.remove();
+                            removed++;
+                        });
+                    });
+                    if (removed > 0) {
+                        for (let i = 0; i < removed; i++) {
+                            incrementAdCounter();
+                        }
+                    }
+                }
+
+                const observer = new MutationObserver(function(mutations) {
+                    removeAds();
+                    mutations.forEach(function(mutation) {
+                        mutation.addedNodes.forEach(function(node) {
+                            if (node.nodeType === 1) {
+                                const el = node;
+                                const id = (el.id || '').toLowerCase();
+                                const className = (el.className || '').toLowerCase();
+                                if (id.includes('popup') || id.includes('modal') || 
+                                    className.includes('popup') || className.includes('modal')) {
+                                    el.remove();
+                                    incrementAdCounter();
+                                }
+                            }
+                        });
+                    });
+                });
+
+                if (document.body) {
+                    observer.observe(document.body, {
+                        childList: true,
+                        subtree: true,
+                        attributes: true,
+                        attributeFilter: ['style', 'class', 'id']
+                    });
+                }
+
+                window.addEventListener('load', function() {
+                    setTimeout(removeAds, 500);
+                    setTimeout(removeAds, 1500);
+                    setTimeout(removeAds, 3000);
+                    setInterval(removeAds, 3000);
+                });
+
+                function detectVideoPlaying() {
+                    const videos = document.getElementsByTagName('video');
+                    for (let video of videos) {
+                        if (!video.paused && !video.ended && video.readyState > 2) {
+                            return true;
+                        }
+                    }
+                    return false;
+                }
+
+                setInterval(function() {
+                    if (detectVideoPlaying()) {
+                        window.chrome.webview.postMessage('video_playing');
+                    }
+                }, 2000);
+
+                // Detect fullscreen video - KEY FIX
+                function handleFullscreenChange() {
+                    const isFullscreen = !!(document.fullscreenElement || 
+                                           document.webkitFullscreenElement || 
+                                           document.mozFullScreenElement);
+                    if (isFullscreen) {
+                        window.chrome.webview.postMessage('video_fullscreen_enter');
+                    } else {
+                        window.chrome.webview.postMessage('video_fullscreen_exit');
+                    }
+                }
+
+                document.addEventListener('fullscreenchange', handleFullscreenChange);
+                document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
+                document.addEventListener('mozfullscreenchange', handleFullscreenChange);
+
+                // Also detect when fullscreen element is a video
+                setInterval(function() {
+                    const fullscreenEl = document.fullscreenElement || 
+                                        document.webkitFullscreenElement || 
+                                        document.mozFullScreenElement;
+                    if (fullscreenEl && (fullscreenEl.tagName === 'VIDEO' || 
+                                        fullscreenEl.querySelector('video'))) {
+                        window.chrome.webview.postMessage('video_fullscreen_enter');
+                    }
+                }, 1000);
+
+                console.log('AdBlock active - Fullscreen support enabled');
+            })();
+        ";
+
+        public MainWindow()
+        {
+            InitializeComponent();
+            Loaded += MainWindow_Loaded;
+            // Hide fullscreen controls initially
+            FullscreenControls.Visibility = Visibility.Collapsed;
+        }
+
+        private async void MainWindow_Loaded(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                string userDataFolder = System.IO.Path.Combine(
+                    Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                    "Un0_Cache"
+                );
+
+                var options = new CoreWebView2EnvironmentOptions();
+                var env = await CoreWebView2Environment.CreateAsync(
+                    userDataFolder: userDataFolder,
+                    options: options
+                );
+
+                await WebView.EnsureCoreWebView2Async(env);
+
+                // Handle fullscreen requests
+                WebView.CoreWebView2.ContainsFullScreenElementChanged += (s, args) =>
+                {
+                    Dispatcher.Invoke(() =>
+                    {
+                        if (WebView.CoreWebView2.ContainsFullScreenElement)
+                        {
+                            EnterFullscreen();
+                        }
+                        else
+                        {
+                            ExitFullscreen();
+                        }
+                    });
+                };
+
+                // Handle New Window Requests
+                WebView.CoreWebView2.NewWindowRequested += (s, args) =>
+                {
+                    // Allow Google OAuth
+                    if (args.Uri != null &&
+                        (args.Uri.Contains("accounts.google.com") ||
+                         args.Uri.Contains("googleapis.com") ||
+                         args.Uri.Contains("google.com")))
+                    {
+                        args.Handled = false;
+                        Dispatcher.Invoke(() => ShowAuthStatus(true));
+                        return;
+                    }
+
+                    // Block all other popups
+                    args.Handled = true;
+                    adBlockCounter++;
+                    Dispatcher.Invoke(() => UpdateProtectionStatus());
+                };
+
+                // Handle messages from webview
+                WebView.CoreWebView2.WebMessageReceived += (s, args) =>
+                {
+                    string message = args.WebMessageAsJson;
+                    if (message.Contains("ad_blocked_"))
+                    {
+                        adBlockCounter++;
+                        Dispatcher.Invoke(() => UpdateProtectionStatus());
+                    }
+                    else if (message.Contains("video_playing"))
+                    {
+                        Dispatcher.Invoke(() =>
+                        {
+                            StatusLabel.Text = "▶ Video playing";
+                            UpdateStatusBarColor("#00FF88");
+                        });
+                    }
+                    else if (message.Contains("video_fullscreen_enter"))
+                    {
+                        Dispatcher.Invoke(() => EnterFullscreen());
+                    }
+                    else if (message.Contains("video_fullscreen_exit"))
+                    {
+                        Dispatcher.Invoke(() => ExitFullscreen());
+                    }
+                    else if (message.Contains("google_auth_complete"))
+                    {
+                        Dispatcher.Invoke(() =>
+                        {
+                            ShowAuthStatus(false);
+                            StatusLabel.Text = "Ready";
+                            UpdateStatusBarColor("#666666");
+                        });
+                    }
+                    else if (message.Contains("user_sign_out"))
+                    {
+                        Dispatcher.Invoke(() =>
+                        {
+                            isAuthenticated = false;
+                            adBlockCounter = 0;
+                            ShowAuthStatus(false);
+                            UpdateProtectionStatus();
+                            StatusLabel.Text = "Signed out";
+                            UpdateStatusBarColor("#FF6B6B");
+                            System.Threading.Tasks.Task.Delay(3000).ContinueWith(_ =>
+                            {
+                                Dispatcher.Invoke(() =>
+                                {
+                                    StatusLabel.Text = "Ready";
+                                    UpdateStatusBarColor("#666666");
+                                });
+                            });
+                        });
+                    }
+                };
+
+                // Navigation events
+                WebView.CoreWebView2.NavigationStarting += (s, args) =>
+                {
+                    currentUrl = args.Uri;
+                    Dispatcher.Invoke(() =>
+                    {
+                        if (args.Uri != null &&
+                            (args.Uri.Contains("accounts.google.com") ||
+                             args.Uri.Contains("googleapis.com")))
+                        {
+                            ShowAuthStatus(true);
+                            LoadProgressBar.Visibility = Visibility.Visible;
+                        }
+                        else
+                        {
+                            LoadProgressBar.Visibility = Visibility.Visible;
+                            StatusLabel.Text = "Loading...";
+                        }
+                    });
+                };
+
+                WebView.CoreWebView2.NavigationCompleted += (s, args) =>
+                {
+                    Dispatcher.Invoke(() =>
+                    {
+                        LoadProgressBar.Visibility = Visibility.Collapsed;
+                        if (!args.IsSuccess)
+                        {
+                            StatusLabel.Text = "Connection error";
+                            UpdateStatusBarColor("#FF4444");
+                        }
+                        else
+                        {
+                            StatusLabel.Text = "Ready";
+                            UpdateStatusBarColor("#666666");
+                            InjectAdBlock();
+                        }
+                    });
+                };
+
+                await WebView.CoreWebView2.AddScriptToExecuteOnDocumentCreatedAsync(adBlockScript);
+                WebView.CoreWebView2.Navigate("https://mainframe2003.netlify.app/");
+                StatusLabel.Text = "Ready";
+                UpdateProtectionStatus();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error initializing: {ex.Message}\n\n" +
+                    "Please install WebView2 Runtime from:\n" +
+                    "https://developer.microsoft.com/en-us/microsoft-edge/webview2/",
+                    "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
+        private void EnterFullscreen()
+        {
+            if (!isFullscreenMode)
+            {
+                isFullscreenMode = true;
+                isVideoFullscreen = true;
+
+                // Hide title bar and status bar
+                TitleBarBorder.Visibility = Visibility.Collapsed;
+                StatusBarBorder.Visibility = Visibility.Collapsed;
+
+                // Show fullscreen controls
+                FullscreenControls.Visibility = Visibility.Visible;
+
+                // Make the window fullscreen
+                this.WindowStyle = WindowStyle.None;
+                this.WindowState = WindowState.Maximized;
+                this.Topmost = true;
+
+                // Make WebView fill the entire space
+                WebViewContainer.Margin = new Thickness(0);
+                WebView.Margin = new Thickness(0);
+
+                StatusLabel.Text = "▶ Fullscreen";
+                UpdateStatusBarColor("#00FF88");
+            }
+        }
+
+        private void ExitFullscreen()
+        {
+            if (isFullscreenMode || isVideoFullscreen)
+            {
+                isFullscreenMode = false;
+                isVideoFullscreen = false;
+
+                // Show title bar and status bar
+                TitleBarBorder.Visibility = Visibility.Visible;
+                StatusBarBorder.Visibility = Visibility.Visible;
+
+                // Hide fullscreen controls
+                FullscreenControls.Visibility = Visibility.Collapsed;
+
+                // Restore window
+                this.WindowStyle = WindowStyle.None;
+                this.WindowState = WindowState.Normal;
+                this.Topmost = false;
+
+                // Reset WebView margin
+                WebViewContainer.Margin = new Thickness(0);
+                WebView.Margin = new Thickness(0);
+
+                StatusLabel.Text = "Ready";
+                UpdateStatusBarColor("#666666");
+            }
+        }
+
+        private void ExitFullscreenButton_Click(object sender, RoutedEventArgs e)
+        {
+            ExitFullscreen();
+            // Also tell the video to exit fullscreen
+            try
+            {
+                WebView.CoreWebView2?.ExecuteScriptAsync(@"
+                    if (document.fullscreenElement) {
+                        document.exitFullscreen();
+                    } else if (document.webkitFullscreenElement) {
+                        document.webkitExitFullscreen();
+                    } else if (document.mozFullScreenElement) {
+                        document.mozCancelFullScreen();
+                    }
+                ");
+            }
+            catch { }
+        }
+
+        private void CloseVideoButton_Click(object sender, RoutedEventArgs e)
+        {
+            ExitFullscreen();
+            // Try to close/stop the video
+            try
+            {
+                WebView.CoreWebView2?.ExecuteScriptAsync(@"
+                    const videos = document.getElementsByTagName('video');
+                    for (let video of videos) {
+                        video.pause();
+                    }
+                    const iframes = document.getElementsByTagName('iframe');
+                    for (let iframe of iframes) {
+                        if (iframe.src.includes('youtube') || iframe.src.includes('vimeo')) {
+                            iframe.src = '';
+                        }
+                    }
+                ");
+            }
+            catch { }
+        }
+
+        private void ShowAuthStatus(bool show)
+        {
+            Dispatcher.Invoke(() =>
+            {
+                if (show && !isAuthenticated)
+                {
+                    AuthStatusPanel.Visibility = Visibility.Visible;
+                    StatusLabel.Text = "🔐 Authenticating...";
+                }
+                else
+                {
+                    AuthStatusPanel.Visibility = Visibility.Collapsed;
+                    if (!StatusLabel.Text.Contains("Video") && !StatusLabel.Text.Contains("Fullscreen"))
+                    {
+                        StatusLabel.Text = "Ready";
+                    }
+                }
+            });
+        }
+
+        private void InjectAdBlock()
+        {
+            try
+            {
+                WebView.CoreWebView2?.ExecuteScriptAsync(adBlockScript);
+            }
+            catch { }
+        }
+
+        private void UpdateProtectionStatus()
+        {
+            Dispatcher.Invoke(() =>
+            {
+                ProtectionIcon.Foreground = (Brush)new BrushConverter().ConvertFromString("#00FF88");
+                ProtectionLabel.Text = $"Protected: {adBlockCounter}";
+                ProtectionLabel.Foreground = (Brush)new BrushConverter().ConvertFromString("#00FF88");
+
+                if (adBlockCounter > 20)
+                {
+                    ProtectionLabel.Foreground = (Brush)new BrushConverter().ConvertFromString("#FF6B6B");
+                    ProtectionIcon.Foreground = (Brush)new BrushConverter().ConvertFromString("#FF6B6B");
+                }
+                else if (adBlockCounter > 10)
+                {
+                    ProtectionLabel.Foreground = (Brush)new BrushConverter().ConvertFromString("#FFD93D");
+                    ProtectionIcon.Foreground = (Brush)new BrushConverter().ConvertFromString("#FFD93D");
+                }
+            });
+        }
+
+        private void UpdateStatusBarColor(string colorHex)
+        {
+            try
+            {
+                var converter = new System.Windows.Media.BrushConverter();
+                StatusLabel.Foreground = (Brush)converter.ConvertFromString(colorHex);
+            }
+            catch { }
+        }
+
+        // Window Control Events
+        private void TitleBar_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+        {
+            if (!isFullscreenMode)
+            {
+                if (e.ClickCount == 2)
+                {
+                    MaximizeButton_Click(sender, e);
+                }
+                else
+                {
+                    this.DragMove();
+                }
+            }
+        }
+
+        private void MinimizeButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (!isFullscreenMode)
+                this.WindowState = WindowState.Minimized;
+        }
+
+        private void MaximizeButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (!isFullscreenMode)
+            {
+                if (this.WindowState == WindowState.Normal)
+                {
+                    this.WindowState = WindowState.Maximized;
+                    MaximizeButton.Content = "☒";
+                }
+                else
+                {
+                    this.WindowState = WindowState.Normal;
+                    MaximizeButton.Content = "☐";
+                }
+            }
+        }
+
+        private void CloseButton_Click(object sender, RoutedEventArgs e)
+        {
+            try { WebView?.Dispose(); } catch { }
+            Application.Current.Shutdown();
+        }
+
+        private void CloseButton_MouseEnter(object sender, MouseEventArgs e)
+        {
+            CloseButton.Background = (Brush)new BrushConverter().ConvertFromString("#E81123");
+            CloseButton.Foreground = Brushes.White;
+        }
+
+        private void CloseButton_MouseLeave(object sender, MouseEventArgs e)
+        {
+            CloseButton.Background = Brushes.Transparent;
+            CloseButton.Foreground = (Brush)new BrushConverter().ConvertFromString("#AAAAAA");
+        }
+
+        private void ControlButton_MouseEnter(object sender, MouseEventArgs e)
+        {
+            if (sender is Button btn && btn != CloseButton)
+            {
+                btn.Background = (Brush)new BrushConverter().ConvertFromString("#333333");
+                btn.Foreground = Brushes.White;
+            }
+        }
+
+        private void ControlButton_MouseLeave(object sender, MouseEventArgs e)
+        {
+            if (sender is Button btn && btn != CloseButton)
+            {
+                btn.Background = Brushes.Transparent;
+                btn.Foreground = (Brush)new BrushConverter().ConvertFromString("#AAAAAA");
+            }
+        }
+
+        protected override void OnClosing(System.ComponentModel.CancelEventArgs e)
+        {
+            try { WebView?.Dispose(); } catch { }
+            base.OnClosing(e);
+        }
+    }
+}
