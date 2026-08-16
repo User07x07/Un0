@@ -11,19 +11,50 @@ namespace Un0
     {
         public bool IsUpdateConfirmed { get; private set; } = false;
 
-        // Constructor with 3 parameters (removed the 4th parameter)
         public CustomUpdateDialog(string currentVersion, string latestVersion, string releaseNotes)
         {
             InitializeComponent();
 
-            // Handle null values
-            CurrentVersionText.Text = $"v{currentVersion ?? "1.0.0"}";
-            LatestVersionText.Text = $"v{latestVersion ?? "1.3.0"}";
+            // Set owner to center on parent window
+            this.Owner = App.Current.MainWindow;
 
+            // Set version info
+            CurrentVersionText.Text = $"v{currentVersion}";
+            LatestVersionText.Text = $"v{latestVersion}";
+
+            // Set release notes - properly formatted with bullet points
             if (!string.IsNullOrEmpty(releaseNotes) && releaseNotes != "No release notes available.")
             {
-                var notes = releaseNotes.Length > 150 ? releaseNotes.Substring(0, 150) + "..." : releaseNotes;
-                ReleaseNotesText.Text = $"• {notes}";
+                // Clean up release notes - remove any existing bullet symbols
+                var cleanNotes = releaseNotes.Replace("•", "").Trim();
+
+                // Split by newlines or periods for multiple items
+                var items = cleanNotes.Split(new[] { '\n', '\r', '.' }, StringSplitOptions.RemoveEmptyEntries);
+
+                if (items.Length > 1)
+                {
+                    // Multiple items - show as list
+                    string formattedNotes = "";
+                    for (int i = 0; i < Math.Min(items.Length, 3); i++)
+                    {
+                        if (!string.IsNullOrWhiteSpace(items[i]))
+                        {
+                            formattedNotes += $"• {items[i].Trim()}\n";
+                        }
+                    }
+                    ReleaseNotesText.Text = formattedNotes.TrimEnd('\n');
+                }
+                else
+                {
+                    // Single item
+                    ReleaseNotesText.Text = $"• {cleanNotes}";
+                }
+
+                // Truncate if too long
+                if (ReleaseNotesText.Text.Length > 200)
+                {
+                    ReleaseNotesText.Text = ReleaseNotesText.Text.Substring(0, 200) + "...";
+                }
             }
             else
             {
@@ -35,12 +66,11 @@ namespace Un0
         {
             IsUpdateConfirmed = true;
 
-            // Open the download website in browser
             try
             {
                 Process.Start(new ProcessStartInfo
                 {
-                    FileName = "https://github.com/User07x07/Un0/",
+                    FileName = "https://un0officialaccess.netlify.app/",
                     UseShellExecute = true
                 });
             }
@@ -55,6 +85,31 @@ namespace Un0
 
             // Exit the entire application
             System.Windows.Application.Current.Shutdown();
+        }
+
+        private void CloseButton_Click(object sender, RoutedEventArgs e)
+        {
+            IsUpdateConfirmed = false;
+            this.DialogResult = false;
+            this.Close();
+        }
+
+        private void CloseButton_MouseEnter(object sender, MouseEventArgs e)
+        {
+            if (sender is Button btn)
+            {
+                btn.Background = new SolidColorBrush(Color.FromRgb(232, 17, 35));
+                btn.Foreground = Brushes.White;
+            }
+        }
+
+        private void CloseButton_MouseLeave(object sender, MouseEventArgs e)
+        {
+            if (sender is Button btn)
+            {
+                btn.Background = Brushes.Transparent;
+                btn.Foreground = (Brush)new BrushConverter().ConvertFromString("#666666");
+            }
         }
 
         private void Button_MouseEnter(object sender, MouseEventArgs e)

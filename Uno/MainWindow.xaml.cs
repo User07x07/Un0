@@ -25,7 +25,7 @@ namespace Un0
         // GitHub constants
         private const string GITHUB_OWNER = "User07x07";
         private const string GITHUB_REPO = "Un0";
-        private const string DOWNLOAD_URL = "https://un0officialaccess.netlify.app/";
+        //private const string DOWNLOAD_URL = "https://un0officialaccess.netlify.app/";
 
         private GitHubClient _client;
         private bool _isUpdateAvailable = false;
@@ -643,11 +643,12 @@ namespace Un0
 
                         try
                         {
-                            Process.Start(new ProcessStartInfo
-                            {
-                                FileName = DOWNLOAD_URL,
-                                UseShellExecute = true
-                            });
+                            //Process.Start(new ProcessStartInfo
+                            //{
+                            //    FileName = DOWNLOAD_URL,
+                            //    UseShellExecute = true
+                            //});
+                            Debug.WriteLine("Just passing by");
                         }
                         catch (Exception ex)
                         {
