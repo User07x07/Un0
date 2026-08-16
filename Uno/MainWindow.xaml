@@ -1,4 +1,4 @@
-﻿<Window x:Class="Uno.MainWindow"
+﻿<Window x:Class="Un0.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:wv2="clr-namespace:Microsoft.Web.WebView2.Wpf;assembly=Microsoft.Web.WebView2.Wpf"
@@ -23,20 +23,68 @@
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Left" Margin="15,0,0,0" VerticalAlignment="Center">
                     <TextBlock Text="Un0" FontSize="16" Foreground="#00FF88" 
                                VerticalAlignment="Center" FontWeight="SemiBold"/>
-                    <TextBlock Text=" v1.0.0" FontSize="13" Foreground="#666666" 
+                    <TextBlock x:Name="VersionText" Text="" FontSize="13" Foreground="#666666" 
                                VerticalAlignment="Center" Margin="8,0,0,0"/>
                 </StackPanel>
 
-                <!-- Center: Authentication Status -->
-                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center" 
-                            x:Name="AuthStatusPanel" Visibility="Collapsed">
-                    <TextBlock Text="🔐" FontSize="16" Foreground="#00FF88" VerticalAlignment="Center" Margin="0,0,8,0"/>
-                    <TextBlock Text="Authenticating..." FontSize="12" Foreground="#00FF88" 
-                               VerticalAlignment="Center" FontFamily="Segoe UI" FontWeight="SemiBold"/>
+                <!-- Center: Navigation Buttons -->
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
+                    <Button x:Name="BackButton" Content="◄" Width="35" Height="30" 
+                            Click="BackButton_Click" IsEnabled="False"
+                            Background="#222222" Foreground="#888888" BorderThickness="0"
+                            FontSize="14" Cursor="Hand" Margin="0,0,5,0"
+                            MouseEnter="NavButton_MouseEnter" MouseLeave="NavButton_MouseLeave">
+                        <Button.Resources>
+                            <Style TargetType="Border">
+                                <Setter Property="CornerRadius" Value="4"/>
+                            </Style>
+                        </Button.Resources>
+                    </Button>
+                    <Button x:Name="RefreshButton" Content="⟳" Width="35" Height="30" 
+                            Click="RefreshButton_Click"
+                            Background="#222222" Foreground="#888888" BorderThickness="0"
+                            FontSize="16" Cursor="Hand" Margin="5,0,5,0"
+                            MouseEnter="NavButton_MouseEnter" MouseLeave="NavButton_MouseLeave">
+                        <Button.Resources>
+                            <Style TargetType="Border">
+                                <Setter Property="CornerRadius" Value="4"/>
+                            </Style>
+                        </Button.Resources>
+                    </Button>
+                    <Button x:Name="HomeButton" Content="🏠" Width="35" Height="30" 
+                            Click="HomeButton_Click"
+                            Background="#222222" Foreground="#888888" BorderThickness="0"
+                            FontSize="12" Cursor="Hand" Margin="5,0,5,0"
+                            MouseEnter="NavButton_MouseEnter" MouseLeave="NavButton_MouseLeave">
+                        <Button.Resources>
+                            <Style TargetType="Border">
+                                <Setter Property="CornerRadius" Value="4"/>
+                            </Style>
+                        </Button.Resources>
+                    </Button>
+                    <!-- Volume Boost Button -->
+                    <Button x:Name="VolumeBoostButton" Content="🔊" Width="35" Height="30" 
+                            Click="VolumeBoostButton_Click"
+                            Background="#222222" Foreground="#888888" BorderThickness="0"
+                            FontSize="14" Cursor="Hand" Margin="5,0,0,0"
+                            ToolTip="Boost Volume (Click to toggle)"
+                            MouseEnter="NavButton_MouseEnter" MouseLeave="NavButton_MouseLeave">
+                        <Button.Resources>
+                            <Style TargetType="Border">
+                                <Setter Property="CornerRadius" Value="4"/>
+                            </Style>
+                        </Button.Resources>
+                    </Button>
                 </StackPanel>
 
                 <!-- Right: Window Controls -->
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,0,10,0" VerticalAlignment="Center">
+                    <Button x:Name="UpdateButton" Content="↻" Width="35" Height="35" 
+                            Click="UpdateButton_Click"
+                            Background="Transparent" Foreground="#00FF88" BorderThickness="0"
+                            FontSize="16" Cursor="Hand"
+                            ToolTip="Check for updates"
+                            MouseEnter="ControlButton_MouseEnter" MouseLeave="ControlButton_MouseLeave"/>
                     <Button x:Name="MinimizeButton" Content="─" Width="45" Height="35" 
                             Click="MinimizeButton_Click"
                             Background="Transparent" Foreground="#AAAAAA" BorderThickness="0"
@@ -86,7 +134,7 @@
             </DockPanel>
         </Border>
 
-        <!-- Fullscreen Overlay Controls (visible when in fullscreen) - FIXED -->
+        <!-- Fullscreen Overlay Controls (visible when in fullscreen) -->
         <Border x:Name="FullscreenControls" Grid.Row="1" Visibility="Collapsed" 
                 VerticalAlignment="Bottom" Height="60" Margin="0,0,0,0">
             <Border.Background>

@@ -1,12 +1,14 @@
 ﻿using Microsoft.Web.WebView2.Core;
 using Microsoft.Web.WebView2.Wpf;
 using System;
+using System.Diagnostics;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
 
-namespace Uno
+namespace Un0
 {
     public partial class MainWindow : Window
     {
@@ -15,6 +17,7 @@ namespace Uno
         private bool isAuthenticated = false;
         private bool isVideoFullscreen = false;
         private bool isFullscreenMode = false;
+        private bool isVolumeBoosted = false;
 
         private string adBlockScript = @"
             (function() {
@@ -52,10 +55,22 @@ namespace Uno
                     ];
                     selectors.forEach(selector => {
                         document.querySelectorAll(selector).forEach(el => {
+                            if (el.closest('.upload-area') || 
+                                el.closest('.drop-zone') ||
+                                el.closest('[class*=""upload""]') ||
+                                el.closest('[class*=""drop""]') ||
+                                el.closest('input[type=""file""]') ||
+                                el.id && el.id.includes('upload') ||
+                                el.id && el.id.includes('drop')) {
+                                return;
+                            }
                             el.remove();
                             removed++;
                         });
                     });
+
+                    document.querySelectorAll('input[type=""file""]').forEach(el => {});
+
                     if (removed > 0) {
                         for (let i = 0; i < removed; i++) {
                             incrementAdCounter();
@@ -71,10 +86,21 @@ namespace Uno
                                 const el = node;
                                 const id = (el.id || '').toLowerCase();
                                 const className = (el.className || '').toLowerCase();
+                                
+                                if (id.includes('upload') || id.includes('drop') || 
+                                    className.includes('upload') || className.includes('drop') ||
+                                    id.includes('file') || className.includes('file')) {
+                                    return;
+                                }
+                                
                                 if (id.includes('popup') || id.includes('modal') || 
                                     className.includes('popup') || className.includes('modal')) {
-                                    el.remove();
-                                    incrementAdCounter();
+                                    if (!el.querySelector('input[type=""file""]') && 
+                                        !el.querySelector('.upload-area') &&
+                                        !el.querySelector('.drop-zone')) {
+                                        el.remove();
+                                        incrementAdCounter();
+                                    }
                                 }
                             }
                         });
@@ -113,7 +139,6 @@ namespace Uno
                     }
                 }, 2000);
 
-                // Detect fullscreen video - KEY FIX
                 function handleFullscreenChange() {
                     const isFullscreen = !!(document.fullscreenElement || 
                                            document.webkitFullscreenElement || 
@@ -129,7 +154,6 @@ namespace Uno
                 document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
                 document.addEventListener('mozfullscreenchange', handleFullscreenChange);
 
-                // Also detect when fullscreen element is a video
                 setInterval(function() {
                     const fullscreenEl = document.fullscreenElement || 
                                         document.webkitFullscreenElement || 
@@ -140,7 +164,89 @@ namespace Uno
                     }
                 }, 1000);
 
-                console.log('AdBlock active - Fullscreen support enabled');
+                document.addEventListener('dragover', function(e) {
+                    e.preventDefault();
+                });
+
+                document.addEventListener('drop', function(e) {
+                    e.preventDefault();
+                    const files = e.dataTransfer.files;
+                    if (files.length > 0) {
+                        const inputs = document.querySelectorAll('input[type=""file""]');
+                        for (let input of inputs) {
+                            const dt = new DataTransfer();
+                            for (let file of files) {
+                                dt.items.add(file);
+                            }
+                            input.files = dt.files;
+                            input.dispatchEvent(new Event('change'));
+                        }
+                    }
+                });
+
+                document.addEventListener('click', function(e) {
+                    const target = e.target;
+                    if (target && target.type === 'file') {
+                        target.click();
+                    }
+                    if (target && (target.className.includes('upload') || 
+                                   target.className.includes('drop') ||
+                                   target.id.includes('upload') ||
+                                   target.id.includes('drop'))) {
+                        const fileInput = target.querySelector('input[type=""file""]') || 
+                                         document.querySelector('input[type=""file""]');
+                        if (fileInput) {
+                            fileInput.click();
+                        }
+                    }
+                });
+
+                console.log('AdBlock active - File upload support enabled');
+            })();
+        ";
+
+        private string volumeBoostScript = @"
+            (function() {
+                let isBoosted = false;
+                let originalVolume = 1.0;
+                
+                function boostVolume() {
+                    const videos = document.getElementsByTagName('video');
+                    let boosted = false;
+                    
+                    if (!isBoosted) {
+                        for (let video of videos) {
+                            if (video.volume !== undefined) {
+                                if (video.volume > 0.1) {
+                                    originalVolume = video.volume;
+                                }
+                                video.volume = Math.min(4.0, video.volume * 4);
+                                boosted = true;
+                            }
+                        }
+                        isBoosted = true;
+                        window.chrome.webview.postMessage('volume_boosted_on');
+                    } else {
+                        for (let video of videos) {
+                            if (video.volume !== undefined) {
+                                video.volume = Math.min(1.0, originalVolume);
+                                boosted = true;
+                            }
+                        }
+                        isBoosted = false;
+                        window.chrome.webview.postMessage('volume_boosted_off');
+                    }
+                    
+                    return boosted;
+                }
+                
+                window.addEventListener('message', function(event) {
+                    if (event.data === 'toggle_volume_boost') {
+                        boostVolume();
+                    }
+                });
+                
+                console.log('Volume Boost script loaded');
             })();
         ";
 
@@ -148,14 +254,153 @@ namespace Uno
         {
             InitializeComponent();
             Loaded += MainWindow_Loaded;
-            // Hide fullscreen controls initially
             FullscreenControls.Visibility = Visibility.Collapsed;
+            UpdateVersionDisplay();
+        }
+
+        private void UpdateVersionDisplay()
+        {
+            try
+            {
+                var version = System.Reflection.Assembly.GetExecutingAssembly().GetName().Version;
+                if (version != null)
+                {
+                    var versionString = $"{version.Major}.{version.Minor}.{version.Build}";
+                    VersionText.Text = $" v{versionString}";
+                    UpdateService.SetVersion(versionString);
+                    Debug.WriteLine($"Version displayed: v{versionString}");
+                }
+                else
+                {
+                    VersionText.Text = " v1.2.1";
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Failed to get version: {ex.Message}");
+                VersionText.Text = " v1.2.1";
+            }
+        }
+
+        private async void UpdateButton_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                UpdateButton.IsEnabled = false;
+                UpdateButton.Foreground = (Brush)new BrushConverter().ConvertFromString("#FFD93D");
+                StatusLabel.Text = " Checking for updates...";
+                UpdateStatusBarColor("#FFD93D");
+
+                var updateService = new UpdateService();
+                var hasUpdate = await updateService.CheckForUpdatesAsync();
+
+                if (hasUpdate)
+                {
+                    var result = MessageBox.Show(
+                        "A new version is available!\n\n" +
+                        "Would you like to download and install it now?",
+                        "Update Available",
+                        MessageBoxButton.YesNo,
+                        MessageBoxImage.Information);
+
+                    if (result == MessageBoxResult.Yes)
+                    {
+                        await updateService.DownloadAndInstallUpdateAsync();
+                    }
+                    else
+                    {
+                        StatusLabel.Text = " Update cancelled";
+                        UpdateStatusBarColor("#666666");
+                        await Task.Delay(1500);
+                        StatusLabel.Text = "Ready";
+                        UpdateStatusBarColor("#666666");
+                    }
+                }
+                else
+                {
+                    StatusLabel.Text = " ✓ You have the latest version";
+                    UpdateStatusBarColor("#00FF88");
+                    await Task.Delay(3000);
+                    StatusLabel.Text = "Ready";
+                    UpdateStatusBarColor("#666666");
+                }
+            }
+            catch (Exception ex)
+            {
+                StatusLabel.Text = " Update check failed";
+                UpdateStatusBarColor("#FF4444");
+                await Task.Delay(2000);
+                StatusLabel.Text = "Ready";
+                UpdateStatusBarColor("#666666");
+            }
+            finally
+            {
+                UpdateButton.IsEnabled = true;
+                UpdateButton.Foreground = (Brush)new BrushConverter().ConvertFromString("#00FF88");
+            }
+        }
+
+        private async void VolumeBoostButton_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                if (WebView?.CoreWebView2 != null)
+                {
+                    isVolumeBoosted = !isVolumeBoosted;
+
+                    await WebView.CoreWebView2.ExecuteScriptAsync(@"
+                        window.postMessage('toggle_volume_boost');
+                    ");
+
+                    if (isVolumeBoosted)
+                    {
+                        VolumeBoostButton.Content = "🔊";
+                        VolumeBoostButton.Background = (Brush)new BrushConverter().ConvertFromString("#00FF88");
+                        VolumeBoostButton.Foreground = (Brush)new BrushConverter().ConvertFromString("#0A0A0A");
+                        StatusLabel.Text = "🔊 Volume Boost ON (400%)";
+                        UpdateStatusBarColor("#00FF88");
+
+                        await Task.Delay(2000);
+                        if (!StatusLabel.Text.Contains("Video"))
+                        {
+                            StatusLabel.Text = "Ready";
+                            UpdateStatusBarColor("#666666");
+                        }
+                    }
+                    else
+                    {
+                        VolumeBoostButton.Content = "🔊";
+                        VolumeBoostButton.Background = (Brush)new BrushConverter().ConvertFromString("#222222");
+                        VolumeBoostButton.Foreground = (Brush)new BrushConverter().ConvertFromString("#888888");
+                        StatusLabel.Text = "🔊 Volume Boost OFF";
+                        UpdateStatusBarColor("#666666");
+
+                        await Task.Delay(1500);
+                        if (!StatusLabel.Text.Contains("Video"))
+                        {
+                            StatusLabel.Text = "Ready";
+                            UpdateStatusBarColor("#666666");
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Volume Boost error: {ex.Message}");
+                StatusLabel.Text = "Volume boost failed";
+                UpdateStatusBarColor("#FF4444");
+                await Task.Delay(1500);
+                StatusLabel.Text = "Ready";
+                UpdateStatusBarColor("#666666");
+            }
         }
 
         private async void MainWindow_Loaded(object sender, RoutedEventArgs e)
         {
             try
             {
+                UpdateVersionDisplay();
+
                 string userDataFolder = System.IO.Path.Combine(
                     Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
                     "Un0_Cache"
@@ -169,7 +414,9 @@ namespace Uno
 
                 await WebView.EnsureCoreWebView2Async(env);
 
-                // Handle fullscreen requests
+                // Inject volume boost script
+                await WebView.CoreWebView2.AddScriptToExecuteOnDocumentCreatedAsync(volumeBoostScript);
+
                 WebView.CoreWebView2.ContainsFullScreenElementChanged += (s, args) =>
                 {
                     Dispatcher.Invoke(() =>
@@ -185,10 +432,8 @@ namespace Uno
                     });
                 };
 
-                // Handle New Window Requests
                 WebView.CoreWebView2.NewWindowRequested += (s, args) =>
                 {
-                    // Allow Google OAuth
                     if (args.Uri != null &&
                         (args.Uri.Contains("accounts.google.com") ||
                          args.Uri.Contains("googleapis.com") ||
@@ -199,13 +444,20 @@ namespace Uno
                         return;
                     }
 
-                    // Block all other popups
+                    if (args.Uri != null &&
+                        (args.Uri.Contains("upload") ||
+                         args.Uri.Contains("file") ||
+                         args.Uri.Contains("drop")))
+                    {
+                        args.Handled = false;
+                        return;
+                    }
+
                     args.Handled = true;
                     adBlockCounter++;
                     Dispatcher.Invoke(() => UpdateProtectionStatus());
                 };
 
-                // Handle messages from webview
                 WebView.CoreWebView2.WebMessageReceived += (s, args) =>
                 {
                     string message = args.WebMessageAsJson;
@@ -230,6 +482,26 @@ namespace Uno
                     {
                         Dispatcher.Invoke(() => ExitFullscreen());
                     }
+                    else if (message.Contains("volume_boosted_on"))
+                    {
+                        Dispatcher.Invoke(() =>
+                        {
+                            StatusLabel.Text = "🔊 Volume Boost ON (400%)";
+                            UpdateStatusBarColor("#00FF88");
+                        });
+                    }
+                    else if (message.Contains("volume_boosted_off"))
+                    {
+                        Dispatcher.Invoke(() =>
+                        {
+                            StatusLabel.Text = "🔊 Volume Boost OFF";
+                            UpdateStatusBarColor("#666666");
+                        });
+                    }
+                    else if (message.Contains("google_auth_attempt"))
+                    {
+                        Dispatcher.Invoke(() => ShowAuthStatus(true));
+                    }
                     else if (message.Contains("google_auth_complete"))
                     {
                         Dispatcher.Invoke(() =>
@@ -249,7 +521,7 @@ namespace Uno
                             UpdateProtectionStatus();
                             StatusLabel.Text = "Signed out";
                             UpdateStatusBarColor("#FF6B6B");
-                            System.Threading.Tasks.Task.Delay(3000).ContinueWith(_ =>
+                            Task.Delay(3000).ContinueWith(_ =>
                             {
                                 Dispatcher.Invoke(() =>
                                 {
@@ -261,7 +533,6 @@ namespace Uno
                     }
                 };
 
-                // Navigation events
                 WebView.CoreWebView2.NavigationStarting += (s, args) =>
                 {
                     currentUrl = args.Uri;
@@ -279,6 +550,7 @@ namespace Uno
                             LoadProgressBar.Visibility = Visibility.Visible;
                             StatusLabel.Text = "Loading...";
                         }
+                        UpdateNavigationButtons();
                     });
                 };
 
@@ -298,13 +570,20 @@ namespace Uno
                             UpdateStatusBarColor("#666666");
                             InjectAdBlock();
                         }
+                        UpdateNavigationButtons();
                     });
+                };
+
+                WebView.CoreWebView2.DocumentTitleChanged += (s, args) =>
+                {
+                    Dispatcher.Invoke(() => { });
                 };
 
                 await WebView.CoreWebView2.AddScriptToExecuteOnDocumentCreatedAsync(adBlockScript);
                 WebView.CoreWebView2.Navigate("https://mainframe2003.netlify.app/");
                 StatusLabel.Text = "Ready";
                 UpdateProtectionStatus();
+                UpdateNavigationButtons();
             }
             catch (Exception ex)
             {
@@ -322,19 +601,14 @@ namespace Uno
                 isFullscreenMode = true;
                 isVideoFullscreen = true;
 
-                // Hide title bar and status bar
                 TitleBarBorder.Visibility = Visibility.Collapsed;
                 StatusBarBorder.Visibility = Visibility.Collapsed;
-
-                // Show fullscreen controls
                 FullscreenControls.Visibility = Visibility.Visible;
 
-                // Make the window fullscreen
                 this.WindowStyle = WindowStyle.None;
                 this.WindowState = WindowState.Maximized;
                 this.Topmost = true;
 
-                // Make WebView fill the entire space
                 WebViewContainer.Margin = new Thickness(0);
                 WebView.Margin = new Thickness(0);
 
@@ -350,19 +624,14 @@ namespace Uno
                 isFullscreenMode = false;
                 isVideoFullscreen = false;
 
-                // Show title bar and status bar
                 TitleBarBorder.Visibility = Visibility.Visible;
                 StatusBarBorder.Visibility = Visibility.Visible;
-
-                // Hide fullscreen controls
                 FullscreenControls.Visibility = Visibility.Collapsed;
 
-                // Restore window
                 this.WindowStyle = WindowStyle.None;
                 this.WindowState = WindowState.Normal;
                 this.Topmost = false;
 
-                // Reset WebView margin
                 WebViewContainer.Margin = new Thickness(0);
                 WebView.Margin = new Thickness(0);
 
@@ -374,7 +643,6 @@ namespace Uno
         private void ExitFullscreenButton_Click(object sender, RoutedEventArgs e)
         {
             ExitFullscreen();
-            // Also tell the video to exit fullscreen
             try
             {
                 WebView.CoreWebView2?.ExecuteScriptAsync(@"
@@ -393,7 +661,6 @@ namespace Uno
         private void CloseVideoButton_Click(object sender, RoutedEventArgs e)
         {
             ExitFullscreen();
-            // Try to close/stop the video
             try
             {
                 WebView.CoreWebView2?.ExecuteScriptAsync(@"
@@ -418,15 +685,15 @@ namespace Uno
             {
                 if (show && !isAuthenticated)
                 {
-                    AuthStatusPanel.Visibility = Visibility.Visible;
                     StatusLabel.Text = "🔐 Authenticating...";
+                    UpdateStatusBarColor("#00FF88");
                 }
                 else
                 {
-                    AuthStatusPanel.Visibility = Visibility.Collapsed;
                     if (!StatusLabel.Text.Contains("Video") && !StatusLabel.Text.Contains("Fullscreen"))
                     {
                         StatusLabel.Text = "Ready";
+                        UpdateStatusBarColor("#666666");
                     }
                 }
             });
@@ -472,7 +739,113 @@ namespace Uno
             catch { }
         }
 
-        // Window Control Events
+        private void BackButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (WebView?.CoreWebView2 != null && WebView.CoreWebView2.CanGoBack)
+            {
+                WebView.CoreWebView2.GoBack();
+                StatusLabel.Text = "Going back...";
+                UpdateStatusBarColor("#00FF88");
+
+                Task.Delay(1500).ContinueWith(_ =>
+                {
+                    Dispatcher.Invoke(() =>
+                    {
+                        if (!StatusLabel.Text.Contains("Video"))
+                        {
+                            StatusLabel.Text = "Ready";
+                            UpdateStatusBarColor("#666666");
+                        }
+                    });
+                });
+            }
+        }
+
+        private void RefreshButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (WebView?.CoreWebView2 != null)
+            {
+                WebView.CoreWebView2.Reload();
+                StatusLabel.Text = "🔄 Refreshing...";
+                UpdateStatusBarColor("#FFD93D");
+
+                RefreshButton.Opacity = 0.5;
+
+                Task.Delay(1500).ContinueWith(_ =>
+                {
+                    Dispatcher.Invoke(() =>
+                    {
+                        RefreshButton.Opacity = 1.0;
+                        if (!StatusLabel.Text.Contains("Video"))
+                        {
+                            StatusLabel.Text = "Ready";
+                            UpdateStatusBarColor("#666666");
+                        }
+                    });
+                });
+            }
+        }
+
+        private void HomeButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (WebView?.CoreWebView2 != null)
+            {
+                WebView.CoreWebView2.Navigate("https://mainframe2003.netlify.app/");
+                StatusLabel.Text = "🏠 Going home...";
+                UpdateStatusBarColor("#00FF88");
+
+                Task.Delay(2000).ContinueWith(_ =>
+                {
+                    Dispatcher.Invoke(() =>
+                    {
+                        if (!StatusLabel.Text.Contains("Video"))
+                        {
+                            StatusLabel.Text = "Ready";
+                            UpdateStatusBarColor("#666666");
+                        }
+                    });
+                });
+            }
+        }
+
+        private void UpdateNavigationButtons()
+        {
+            if (WebView?.CoreWebView2 != null)
+            {
+                BackButton.IsEnabled = WebView.CoreWebView2.CanGoBack;
+                BackButton.Opacity = BackButton.IsEnabled ? 1.0 : 0.5;
+                BackButton.Foreground = BackButton.IsEnabled ?
+                    (Brush)new BrushConverter().ConvertFromString("#FFFFFF") :
+                    (Brush)new BrushConverter().ConvertFromString("#555555");
+            }
+        }
+
+        private void NavButton_MouseEnter(object sender, MouseEventArgs e)
+        {
+            if (sender is Button btn && btn.IsEnabled)
+            {
+                btn.Background = (Brush)new BrushConverter().ConvertFromString("#333333");
+                btn.Foreground = (Brush)new BrushConverter().ConvertFromString("#FFFFFF");
+            }
+        }
+
+        private void NavButton_MouseLeave(object sender, MouseEventArgs e)
+        {
+            if (sender is Button btn)
+            {
+                if (btn.IsEnabled)
+                {
+                    btn.Background = (Brush)new BrushConverter().ConvertFromString("#222222");
+                    btn.Foreground = (Brush)new BrushConverter().ConvertFromString("#888888");
+                }
+                else
+                {
+                    btn.Background = (Brush)new BrushConverter().ConvertFromString("#222222");
+                    btn.Foreground = (Brush)new BrushConverter().ConvertFromString("#555555");
+                }
+            }
+        }
+
         private void TitleBar_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
         {
             if (!isFullscreenMode)
