@@ -2,22 +2,34 @@
 using Microsoft.Web.WebView2.Wpf;
 using System;
 using System.Diagnostics;
+using System.Net.Http;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
+using Octokit;
 
 namespace Un0
 {
     public partial class MainWindow : Window
     {
-        private int adBlockCounter = 0;
+        private int adBlockCounter = 0; // Removed readonly
         private string currentUrl = "";
         private bool isAuthenticated = false;
         private bool isVideoFullscreen = false;
         private bool isFullscreenMode = false;
         private bool isVolumeBoosted = false;
+        private bool _isLoaded = false;
+
+        // GitHub constants
+        private const string GITHUB_OWNER = "User07x07";
+        private const string GITHUB_REPO = "Un0";
+        private const string DOWNLOAD_URL = "https://un0officialaccess.netlify.app/";
+
+        private GitHubClient _client;
+        private bool _isUpdateAvailable = false;
+        private Octokit.Release _latestRelease;
 
         private string adBlockScript = @"
             (function() {
@@ -220,7 +232,7 @@ namespace Un0
                                 if (video.volume > 0.1) {
                                     originalVolume = video.volume;
                                 }
-                                video.volume = Math.min(4.0, video.volume * );
+                                video.volume = Math.min(4.0, video.volume * 4);
                                 boosted = true;
                             }
                         }
@@ -253,9 +265,25 @@ namespace Un0
         public MainWindow()
         {
             InitializeComponent();
-            Loaded += MainWindow_Loaded;
+            InitializeGitHubClient();
+            this.Loaded += MainWindow_Loaded;
             FullscreenControls.Visibility = Visibility.Collapsed;
             UpdateVersionDisplay();
+        }
+
+        private void InitializeGitHubClient()
+        {
+            try
+            {
+                _client = new GitHubClient(new ProductHeaderValue("Un0-App"));
+                _client.SetRequestTimeout(TimeSpan.FromSeconds(10));
+                Debug.WriteLine("GitHub client initialized.");
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"GitHub client initialization error: {ex.Message}");
+                _client = null;
+            }
         }
 
         private void UpdateVersionDisplay()
@@ -267,18 +295,323 @@ namespace Un0
                 {
                     var versionString = $"{version.Major}.{version.Minor}.{version.Build}";
                     VersionText.Text = $" v{versionString}";
-                    UpdateService.SetVersion(versionString);
                     Debug.WriteLine($"Version displayed: v{versionString}");
+
+                    if (App.IsLatestVersion)
+                    {
+                        LatestLabel.Visibility = Visibility.Visible;
+                        LatestLabel.Text = " ✓ Latest";
+                        LatestLabel.Foreground = (Brush)new BrushConverter().ConvertFromString("#90EE90");
+                    }
+                    else
+                    {
+                        LatestLabel.Visibility = Visibility.Collapsed;
+                    }
                 }
                 else
                 {
-                    VersionText.Text = " v1.2.1";
+                    VersionText.Text = " v1.0.0";
                 }
             }
             catch (Exception ex)
             {
                 Debug.WriteLine($"Failed to get version: {ex.Message}");
-                VersionText.Text = " v1.2.1";
+                VersionText.Text = " v1.0.0";
+            }
+        }
+
+        private async Task<bool> CheckForUpdatesAsync()
+        {
+            try
+            {
+                if (_client == null)
+                {
+                    Debug.WriteLine("GitHub client not initialized");
+                    return false;
+                }
+
+                var currentVersion = System.Reflection.Assembly.GetExecutingAssembly().GetName().Version;
+                var currentVersionString = currentVersion != null ? $"{currentVersion.Major}.{currentVersion.Minor}.{currentVersion.Build}" : "1.0.0";
+
+                Debug.WriteLine($"Checking for updates... Current version: {currentVersionString}");
+
+                var releases = await _client.Repository.Release.GetAll(GITHUB_OWNER, GITHUB_REPO);
+
+                Debug.WriteLine($"Found {releases.Count} releases");
+
+                if (releases.Count > 0)
+                {
+                    _latestRelease = releases[0];
+                    var latestVersion = _latestRelease.TagName.Replace("v", "");
+                    Debug.WriteLine($"Latest version: {latestVersion}");
+                    Debug.WriteLine($"Current version: {currentVersionString}");
+
+                    if (IsNewerVersion(latestVersion, currentVersionString))
+                    {
+                        _isUpdateAvailable = true;
+                        Debug.WriteLine("Update available!");
+                        return true;
+                    }
+                    else
+                    {
+                        Debug.WriteLine("No update available - app is latest");
+                    }
+                }
+
+                return false;
+            }
+            catch (HttpRequestException ex)
+            {
+                Debug.WriteLine($"Network error during update check: {ex.Message}");
+                return false;
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Update check failed: {ex.Message}");
+                return false;
+            }
+        }
+
+        private async Task<string> GetLatestVersionAsync()
+        {
+            try
+            {
+                if (_client == null) return "1.3.0";
+
+                var releases = await _client.Repository.Release.GetAll(GITHUB_OWNER, GITHUB_REPO);
+                if (releases.Count > 0)
+                {
+                    return releases[0].TagName.Replace("v", "");
+                }
+                return "1.3.0";
+            }
+            catch
+            {
+                return "1.3.0";
+            }
+        }
+
+        private async Task<string> GetLatestReleaseNotesAsync()
+        {
+            try
+            {
+                if (_client == null) return "";
+
+                var releases = await _client.Repository.Release.GetAll(GITHUB_OWNER, GITHUB_REPO);
+                if (releases.Count > 0)
+                {
+                    return releases[0].Body ?? "No release notes available.";
+                }
+                return "";
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"GetLatestReleaseNotesAsync error: {ex.Message}");
+                return "";
+            }
+        }
+
+        private static bool IsNewerVersion(string latest, string current)
+        {
+            try
+            {
+                var latestParts = latest.Split('.');
+                var currentParts = current.Split('.');
+
+                for (int i = 0; i < Math.Max(latestParts.Length, currentParts.Length); i++)
+                {
+                    int latestNum = i < latestParts.Length ? int.Parse(latestParts[i]) : 0;
+                    int currentNum = i < currentParts.Length ? int.Parse(currentParts[i]) : 0;
+
+                    if (latestNum > currentNum)
+                        return true;
+                    if (latestNum < currentNum)
+                        return false;
+                }
+                return false;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        private void ShowUpdateWarning(bool show)
+        {
+            Dispatcher.Invoke(() =>
+            {
+                if (show)
+                {
+                    UpdateWarningLabel.Visibility = Visibility.Visible;
+                    FullscreenHint.Visibility = Visibility.Collapsed;
+                    StatusLabel.Text = " Update available!";
+                    UpdateStatusBarColor("#FF4444");
+
+                    WebView.IsEnabled = false;
+                    WebViewBorder.Opacity = 0.5;
+
+                    ShowWebViewOverlay(true);
+                }
+                else
+                {
+                    UpdateWarningLabel.Visibility = Visibility.Collapsed;
+                    FullscreenHint.Visibility = Visibility.Visible;
+                    StatusLabel.Text = " Ready";
+                    UpdateStatusBarColor("#666666");
+
+                    WebView.IsEnabled = true;
+                    WebViewBorder.Opacity = 1.0;
+
+                    ShowWebViewOverlay(false);
+                }
+            });
+        }
+
+        private void ShowWebViewOverlay(bool show)
+        {
+            Dispatcher.Invoke(() =>
+            {
+                var overlay = WebViewContainer.FindName("UpdateOverlay") as Grid;
+
+                if (show)
+                {
+                    if (overlay == null)
+                    {
+                        overlay = new Grid();
+                        overlay.Name = "UpdateOverlay";
+                        overlay.Background = new SolidColorBrush(Color.FromArgb(200, 10, 10, 10));
+                        overlay.HorizontalAlignment = HorizontalAlignment.Stretch;
+                        overlay.VerticalAlignment = VerticalAlignment.Stretch;
+
+                        var stackPanel = new StackPanel
+                        {
+                            HorizontalAlignment = HorizontalAlignment.Center,
+                            VerticalAlignment = VerticalAlignment.Center
+                        };
+
+                        var iconText = new TextBlock
+                        {
+                            Text = "⚠️",
+                            Foreground = (Brush)new BrushConverter().ConvertFromString("#FF4444"),
+                            FontSize = 48,
+                            HorizontalAlignment = HorizontalAlignment.Center,
+                            Margin = new Thickness(0, 0, 0, 10)
+                        };
+                        stackPanel.Children.Add(iconText);
+
+                        var messageText = new TextBlock
+                        {
+                            Text = "UPDATE REQUIRED",
+                            Foreground = (Brush)new BrushConverter().ConvertFromString("#FF4444"),
+                            FontSize = 28,
+                            FontWeight = FontWeights.Bold,
+                            HorizontalAlignment = HorizontalAlignment.Center,
+                            Margin = new Thickness(0, 0, 0, 10)
+                        };
+                        stackPanel.Children.Add(messageText);
+
+                        var subMessageText = new TextBlock
+                        {
+                            Text = "Please update to the latest version to continue using Un0.",
+                            Foreground = (Brush)new BrushConverter().ConvertFromString("#CCCCCC"),
+                            FontSize = 16,
+                            HorizontalAlignment = HorizontalAlignment.Center,
+                            Margin = new Thickness(0, 0, 0, 20),
+                            TextWrapping = System.Windows.TextWrapping.Wrap,
+                            TextAlignment = TextAlignment.Center,
+                            MaxWidth = 500
+                        };
+                        stackPanel.Children.Add(subMessageText);
+
+                        var updateButton = new Button
+                        {
+                            Content = "Check for Updates",
+                            Width = 200,
+                            Height = 45,
+                            FontSize = 14,
+                            FontWeight = FontWeights.SemiBold,
+                            Background = (Brush)new BrushConverter().ConvertFromString("#00FF88"),
+                            Foreground = (Brush)new BrushConverter().ConvertFromString("#0A0A0A"),
+                            BorderThickness = new Thickness(0),
+                            Cursor = Cursors.Hand,
+                            HorizontalAlignment = HorizontalAlignment.Center
+                        };
+                        // FIXED: Direct event handler assignment
+                        updateButton.Click += UpdateButton_Click;
+                        stackPanel.Children.Add(updateButton);
+
+                        overlay.Children.Add(stackPanel);
+                        WebViewContainer.Children.Add(overlay);
+                    }
+                    overlay.Visibility = Visibility.Visible;
+                }
+                else
+                {
+                    if (overlay != null)
+                    {
+                        overlay.Visibility = Visibility.Collapsed;
+                    }
+                }
+            });
+        }
+
+        // Separate method for overlay button click to avoid ambiguity
+        private async void UpdateButtonClickHandler(object sender, RoutedEventArgs e)
+        {
+            UpdateButton_Click(sender, e);
+        }
+
+        private async Task CheckForUpdatesOnLoad()
+        {
+            try
+            {
+                if (_client == null)
+                {
+                    Debug.WriteLine("GitHub client not initialized");
+                    return;
+                }
+
+                var currentVersion = System.Reflection.Assembly.GetExecutingAssembly().GetName().Version;
+                var currentVersionString = currentVersion != null ? $"{currentVersion.Major}.{currentVersion.Minor}.{currentVersion.Build}" : "1.0.0";
+
+                Debug.WriteLine($"Checking for updates on load... Current version: {currentVersionString}");
+
+                var releases = await _client.Repository.Release.GetAll(GITHUB_OWNER, GITHUB_REPO);
+
+                if (releases.Count > 0)
+                {
+                    _latestRelease = releases[0];
+                    var latestVersion = _latestRelease.TagName.Replace("v", "");
+                    Debug.WriteLine($"Latest version: {latestVersion}");
+
+                    if (IsNewerVersion(latestVersion, currentVersionString))
+                    {
+                        _isUpdateAvailable = true;
+                        Debug.WriteLine("Update available! Showing warning label and disabling WebView2.");
+
+                        ShowUpdateWarning(true);
+                    }
+                    else
+                    {
+                        Debug.WriteLine("No update available - app is latest");
+                        ShowUpdateWarning(false);
+                        App.IsLatestVersion = true;
+
+                        LatestLabel.Visibility = Visibility.Visible;
+                        LatestLabel.Text = " ✓ Latest";
+                        LatestLabel.Foreground = (Brush)new BrushConverter().ConvertFromString("#90EE90");
+                    }
+                }
+            }
+            catch (HttpRequestException ex)
+            {
+                Debug.WriteLine($"Network error during update check: {ex.Message}");
+                ShowUpdateWarning(false);
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Update check failed: {ex.Message}");
+                ShowUpdateWarning(false);
             }
         }
 
@@ -291,21 +624,40 @@ namespace Un0
                 StatusLabel.Text = " Checking for updates...";
                 UpdateStatusBarColor("#FFD93D");
 
-                var updateService = new UpdateService();
-                var hasUpdate = await updateService.CheckForUpdatesAsync();
+                var hasUpdate = await CheckForUpdatesAsync();
 
                 if (hasUpdate)
                 {
-                    var result = MessageBox.Show(
-                        "A new version is available!\n\n" +
-                        "Would you like to download and install it now?",
-                        "Update Available",
-                        MessageBoxButton.YesNo,
-                        MessageBoxImage.Information);
+                    var currentVersion = System.Reflection.Assembly.GetExecutingAssembly().GetName().Version;
+                    var currentVersionString = currentVersion != null ? $"{currentVersion.Major}.{currentVersion.Minor}.{currentVersion.Build}" : "1.0.0";
+                    var latestVersion = await GetLatestVersionAsync() ?? "1.3.0";
+                    var releaseNotes = await GetLatestReleaseNotesAsync() ?? "New features and improvements";
 
-                    if (result == MessageBoxResult.Yes)
+                    var updateDialog = new CustomUpdateDialog(currentVersionString, latestVersion, releaseNotes);
+                    updateDialog.ShowDialog();
+
+                    if (updateDialog.IsUpdateConfirmed)
                     {
-                        await updateService.DownloadAndInstallUpdateAsync();
+                        StatusLabel.Text = " Opening download page...";
+                        UpdateStatusBarColor("#FFD93D");
+
+                        try
+                        {
+                            Process.Start(new ProcessStartInfo
+                            {
+                                FileName = DOWNLOAD_URL,
+                                UseShellExecute = true
+                            });
+                        }
+                        catch (Exception ex)
+                        {
+                            MessageBox.Show($"Error opening browser: {ex.Message}",
+                                "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                        }
+
+                        await Task.Delay(2000);
+                        StatusLabel.Text = "Ready";
+                        UpdateStatusBarColor("#666666");
                     }
                     else
                     {
@@ -320,6 +672,12 @@ namespace Un0
                 {
                     StatusLabel.Text = " ✓ You have the latest version";
                     UpdateStatusBarColor("#00FF88");
+
+                    LatestLabel.Visibility = Visibility.Visible;
+                    LatestLabel.Text = " ✓ Latest";
+                    LatestLabel.Foreground = (Brush)new BrushConverter().ConvertFromString("#90EE90");
+                    App.IsLatestVersion = true;
+
                     await Task.Delay(3000);
                     StatusLabel.Text = "Ready";
                     UpdateStatusBarColor("#666666");
@@ -397,6 +755,13 @@ namespace Un0
 
         private async void MainWindow_Loaded(object sender, RoutedEventArgs e)
         {
+            if (_isLoaded)
+            {
+                Debug.WriteLine("MainWindow already loaded, ignoring duplicate call.");
+                return;
+            }
+            _isLoaded = true;
+
             try
             {
                 UpdateVersionDisplay();
@@ -414,7 +779,6 @@ namespace Un0
 
                 await WebView.EnsureCoreWebView2Async(env);
 
-                // Inject volume boost script
                 await WebView.CoreWebView2.AddScriptToExecuteOnDocumentCreatedAsync(volumeBoostScript);
 
                 WebView.CoreWebView2.ContainsFullScreenElementChanged += (s, args) =>
@@ -584,6 +948,8 @@ namespace Un0
                 StatusLabel.Text = "Ready";
                 UpdateProtectionStatus();
                 UpdateNavigationButtons();
+
+                await CheckForUpdatesOnLoad();
             }
             catch (Exception ex)
             {
@@ -887,7 +1253,7 @@ namespace Un0
         private void CloseButton_Click(object sender, RoutedEventArgs e)
         {
             try { WebView?.Dispose(); } catch { }
-            Application.Current.Shutdown();
+            System.Windows.Application.Current.Shutdown();
         }
 
         private void CloseButton_MouseEnter(object sender, MouseEventArgs e)

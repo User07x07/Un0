@@ -25,6 +25,10 @@
                                VerticalAlignment="Center" FontWeight="SemiBold"/>
                     <TextBlock x:Name="VersionText" Text="" FontSize="13" Foreground="#666666" 
                                VerticalAlignment="Center" Margin="8,0,0,0"/>
+                    <TextBlock x:Name="LatestLabel" Text="" FontSize="11" 
+                               Foreground="#90EE90" VerticalAlignment="Center" 
+                               Margin="8,0,0,0" Visibility="Collapsed"
+                               FontWeight="SemiBold"/>
                 </StackPanel>
 
                 <!-- Center: Navigation Buttons -->
@@ -111,7 +115,9 @@
 
         <!-- WebView2 Container -->
         <Grid Grid.Row="1" x:Name="WebViewContainer">
-            <wv2:WebView2 x:Name="WebView" Margin="0,0,0,0"/>
+            <Border x:Name="WebViewBorder" Background="Transparent">
+                <wv2:WebView2 x:Name="WebView" Margin="0,0,0,0"/>
+            </Border>
         </Grid>
 
         <!-- Status Bar -->
@@ -119,17 +125,30 @@
             <DockPanel>
                 <!-- Left side - Status -->
                 <TextBlock x:Name="StatusLabel" Text=" Ready" 
-                           Foreground="#666666" VerticalAlignment="Center" Margin="15,0,0,0"
-                           FontSize="12" FontFamily="Segoe UI"/>
+                   Foreground="#666666" VerticalAlignment="Center" Margin="15,0,0,0"
+                   FontSize="12" FontFamily="Segoe UI"/>
+
+                <!-- Center - Update Warning Label -->
+                <TextBlock x:Name="UpdateWarningLabel" Text="⚠️ Please Update to the Latest Version" 
+                   Foreground="#FF4444" VerticalAlignment="Center" 
+                   FontSize="11" FontFamily="Segoe UI" FontWeight="SemiBold"
+                   HorizontalAlignment="Center" DockPanel.Dock="Left"
+                   Margin="20,0,0,0" Visibility="Collapsed"/>
 
                 <!-- Right side - Protection Status -->
-                <StackPanel Orientation="Horizontal" DockPanel.Dock="Right" Margin="0,0,15,0">
+                <StackPanel Orientation="Horizontal" DockPanel.Dock="Right" Margin="0,0,0,0">
                     <TextBlock x:Name="ProtectionIcon" Text="🛡️" 
-                               Foreground="#00FF88" VerticalAlignment="Center" 
-                               FontSize="14" Margin="0,0,8,0"/>
+                       Foreground="#00FF88" VerticalAlignment="Center" 
+                       FontSize="14" Margin="0,0,8,0"/>
                     <TextBlock x:Name="ProtectionLabel" Text="Protected: 0" 
-                               Foreground="#00FF88" VerticalAlignment="Center" 
-                               FontSize="12" FontFamily="Segoe UI" FontWeight="SemiBold"/>
+                       Foreground="#00FF88" VerticalAlignment="Center" 
+                       FontSize="12" FontFamily="Segoe UI" FontWeight="SemiBold"/>
+
+                    <!-- Keyboard Shortcut Hint - Right of Protection Shield -->
+                    <TextBlock x:Name="FullscreenHint" Text="Press 'F' to Toggle Fullscreen" 
+                       Foreground="#444444" VerticalAlignment="Center" 
+                       FontSize="10" FontFamily="Segoe UI"
+                       Margin="15,0,15,0"/>
                 </StackPanel>
             </DockPanel>
         </Border>
