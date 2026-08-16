@@ -220,7 +220,7 @@ namespace Un0
                                 if (video.volume > 0.1) {
                                     originalVolume = video.volume;
                                 }
-                                video.volume = Math.min(4.0, video.volume * 4);
+                                video.volume = Math.min(4.0, video.volume * );
                                 boosted = true;
                             }
                         }
