@@ -21,12 +21,49 @@ namespace Un0.Services
                 (function() {
                     let isBoosted = false;
                     let originalVolume = 1.0;
+                    
                     function boostVolume() {
-                        // ... your volume boost logic ...
+                        const videos = document.getElementsByTagName('video');
+                        let boosted = false;
+                        
+                        if (!isBoosted) {
+                            // Store original volume from the first video that has volume > 0.1
+                            for (let video of videos) {
+                                if (video.volume !== undefined && video.volume > 0.1) {
+                                    originalVolume = video.volume;
+                                    break;
+                                }
+                            }
+                            // Boost all videos to 4x (capped at 4.0)
+                            for (let video of videos) {
+                                if (video.volume !== undefined) {
+                                    video.volume = Math.min(4.0, originalVolume * 4);
+                                    boosted = true;
+                                }
+                            }
+                            isBoosted = true;
+                            window.chrome.webview.postMessage('volume_boosted_on');
+                        } else {
+                            // Restore original volume
+                            for (let video of videos) {
+                                if (video.volume !== undefined) {
+                                    video.volume = Math.min(1.0, originalVolume);
+                                    boosted = true;
+                                }
+                            }
+                            isBoosted = false;
+                            window.chrome.webview.postMessage('volume_boosted_off');
+                        }
+                        return boosted;
                     }
+                    
                     window.addEventListener('message', function(event) {
-                        if (event.data === 'toggle_volume_boost') boostVolume();
+                        if (event.data === 'toggle_volume_boost') {
+                            boostVolume();
+                        }
                     });
+                    
+                    console.log('Volume Boost script loaded');
                 })();
             ";
         }

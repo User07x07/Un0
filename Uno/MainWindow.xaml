@@ -69,11 +69,11 @@
                     </Button>
                     <!-- Volume Boost Button -->
                     <Button x:Name="VolumeBoostButton" Content="🔊" Width="35" Height="30" 
-                            Click="VolumeBoostButton_Click"
-                            Background="#222222" Foreground="#888888" BorderThickness="0"
-                            FontSize="14" Cursor="Hand" Margin="5,0,0,0"
-                            ToolTip="Boost Volume (Click to toggle)"
-                            MouseEnter="NavButton_MouseEnter" MouseLeave="NavButton_MouseLeave">
+                    Click="VolumeBoostButton_Click"
+                    Background="#222222" Foreground="#888888" BorderThickness="0"
+                    FontSize="14" Cursor="Hand" Margin="5,0,0,0"
+                    ToolTip="Boost Volume (Click to toggle)"
+                    MouseEnter="NavButton_MouseEnter" MouseLeave="NavButton_MouseLeave">
                         <Button.Resources>
                             <Style TargetType="Border">
                                 <Setter Property="CornerRadius" Value="4"/>
