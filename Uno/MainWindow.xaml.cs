@@ -60,6 +60,17 @@ namespace Un0
             _updateService.UpdateAvailabilityChanged += (s, hasUpdate) =>
             {
                 ShowUpdateWarning(hasUpdate);
+                if (!hasUpdate)
+                {
+                    // Show "✓ Latest" label
+                    LatestLabel.Visibility = Visibility.Visible;
+                    LatestLabel.Text = " ✓ Latest";
+                    LatestLabel.Foreground = (Brush)new BrushConverter().ConvertFromString("#90EE90");
+                }
+                else
+                {
+                    LatestLabel.Visibility = Visibility.Collapsed;
+                }
             };
 
             this.Loaded += MainWindow_Loaded;
@@ -185,21 +196,21 @@ namespace Un0
                     UpdateWarningLabel.Visibility = Visibility.Visible;
                     FullscreenHint.Visibility = Visibility.Collapsed;
                     _statusBar.SetStatus(" Update available!", "#FF4444");
+                    UpdateStatusIcon.Visibility = Visibility.Visible;   // show icon
 
                     WebView.IsEnabled = false;
                     WebViewBorder.Opacity = 0.5;
-
                     ShowWebViewOverlay(true);
                 }
                 else
                 {
                     UpdateWarningLabel.Visibility = Visibility.Collapsed;
                     FullscreenHint.Visibility = Visibility.Visible;
-                    _statusBar.SetStatus(" Ready", "#666666");
+                    _statusBar.SetStatus("Ready", "#666666");
+                    UpdateStatusIcon.Visibility = Visibility.Collapsed; // hide icon
 
                     WebView.IsEnabled = true;
                     WebViewBorder.Opacity = 1.0;
-
                     ShowWebViewOverlay(false);
                 }
             });

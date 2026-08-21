@@ -17,7 +17,8 @@
         </Grid.RowDefinitions>
 
         <!-- Custom Title Bar -->
-        <Border x:Name="TitleBarBorder" Grid.Row="0" Background="#0A0A0A" Height="45" MouseLeftButtonDown="TitleBar_MouseLeftButtonDown">
+        <Border x:Name="TitleBarBorder" Grid.Row="0" Background="#0A0A0A" Height="45" 
+                MouseLeftButtonDown="TitleBar_MouseLeftButtonDown">
             <Grid>
                 <!-- Left: App Icon and Title -->
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Left" Margin="15,0,0,0" VerticalAlignment="Center">
@@ -115,20 +116,46 @@
 
         <!-- WebView2 Container -->
         <Grid Grid.Row="1" x:Name="WebViewContainer">
-            <Border x:Name="WebViewBorder" Background="Transparent">
+            <Border x:Name="WebViewBorder" Background="Transparent" CornerRadius="0">
                 <wv2:WebView2 x:Name="WebView" Margin="0,0,0,0"/>
             </Border>
+            <!-- Update Overlay (initially hidden) -->
+            <Grid x:Name="UpdateOverlay" Visibility="Collapsed" 
+                  Background="#CC0A0A0A" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
+                <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                    <TextBlock Text="⚠️" Foreground="#FF4444" FontSize="48" 
+                               HorizontalAlignment="Center" Margin="0,0,0,10"/>
+                    <TextBlock Text="UPDATE REQUIRED" Foreground="#FF4444" FontSize="28" 
+                               FontWeight="Bold" HorizontalAlignment="Center" Margin="0,0,0,10"/>
+                    <TextBlock Text="Please update to the latest version to continue using Un0." 
+                               Foreground="#CCCCCC" FontSize="16" 
+                               HorizontalAlignment="Center" Margin="0,0,0,20"
+                               TextWrapping="Wrap" TextAlignment="Center" MaxWidth="500"/>
+                    <Button x:Name="OverlayUpdateButton" Content="Check for Updates" 
+                            Width="200" Height="45" FontSize="14" FontWeight="SemiBold"
+                            Background="#00FF88" Foreground="#0A0A0A" BorderThickness="0"
+                            Cursor="Hand" HorizontalAlignment="Center"
+                            Click="UpdateButton_Click"/>
+                </StackPanel>
+            </Grid>
         </Grid>
 
         <!-- Status Bar -->
-        <Border x:Name="StatusBarBorder" Grid.Row="2" Background="#0A0A0A" Height="32" BorderBrush="#1A1A1A" BorderThickness="0,1,0,0">
+        <Border x:Name="StatusBarBorder" Grid.Row="2" Background="#0A0A0A" Height="32" 
+        BorderBrush="#1A1A1A" BorderThickness="0,1,0,0">
             <DockPanel>
                 <!-- Left side - Status -->
-                <TextBlock x:Name="StatusLabel" Text=" Ready" 
-                   Foreground="#666666" VerticalAlignment="Center" Margin="15,0,0,0"
-                   FontSize="12" FontFamily="Segoe UI"/>
+                <StackPanel Orientation="Horizontal" DockPanel.Dock="Left">
+                    <TextBlock x:Name="StatusLabel" Text=" Ready" 
+                       Foreground="#666666" VerticalAlignment="Center" Margin="15,0,0,0"
+                       FontSize="12" FontFamily="Segoe UI"/>
+                    <!-- Update status icon (visible when update is available) -->
+                    <TextBlock x:Name="UpdateStatusIcon" Text="⚠️" Foreground="#FF4444" 
+                       FontSize="12" VerticalAlignment="Center" Margin="5,0,0,0" 
+                       Visibility="Collapsed"/>
+                </StackPanel>
 
-                <!-- Center - Update Warning Label -->
+                <!-- Center - Update Warning Label (prominent warning) -->
                 <TextBlock x:Name="UpdateWarningLabel" Text="⚠️ Please Update to the Latest Version" 
                    Foreground="#FF4444" VerticalAlignment="Center" 
                    FontSize="11" FontFamily="Segoe UI" FontWeight="SemiBold"
@@ -136,7 +163,7 @@
                    Margin="20,0,0,0" Visibility="Collapsed"/>
 
                 <!-- Right side - Protection Status -->
-                <StackPanel Orientation="Horizontal" DockPanel.Dock="Right" Margin="0,0,0,0">
+                <StackPanel Orientation="Horizontal" DockPanel.Dock="Right" Margin="0,0,15,0">
                     <TextBlock x:Name="ProtectionIcon" Text="🛡️" 
                        Foreground="#00FF88" VerticalAlignment="Center" 
                        FontSize="14" Margin="0,0,8,0"/>
@@ -144,11 +171,11 @@
                        Foreground="#00FF88" VerticalAlignment="Center" 
                        FontSize="12" FontFamily="Segoe UI" FontWeight="SemiBold"/>
 
-                    <!-- Keyboard Shortcut Hint - Right of Protection Shield -->
+                    <!-- Keyboard Shortcut Hint -->
                     <TextBlock x:Name="FullscreenHint" Text="Press 'F' to Toggle Fullscreen" 
                        Foreground="#444444" VerticalAlignment="Center" 
                        FontSize="10" FontFamily="Segoe UI"
-                       Margin="15,0,15,0"/>
+                       Margin="15,0,0,0"/>
                 </StackPanel>
             </DockPanel>
         </Border>

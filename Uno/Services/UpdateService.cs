@@ -3,6 +3,7 @@ using System;
 using System.Diagnostics;
 using System.Net.Http;
 using System.Threading.Tasks;
+using System.Windows;
 
 namespace Un0.Services
 {
@@ -14,6 +15,7 @@ namespace Un0.Services
         private Octokit.Release _latestRelease;
         private bool _isUpdateAvailable = false;
         private StatusBarService _statusBar;
+        private bool _isChecking = false;
 
         public event EventHandler<bool> UpdateAvailabilityChanged;
 
@@ -37,6 +39,10 @@ namespace Un0.Services
         {
             bool hasUpdate = await CheckForUpdatesAsync();
             UpdateAvailabilityChanged?.Invoke(this, hasUpdate);
+            if (!hasUpdate)
+            {
+                App.IsLatestVersion = true;
+            }
         }
 
         public async Task<bool> CheckForUpdatesAsync()
@@ -107,14 +113,86 @@ namespace Un0.Services
                     if (latestNum > currentNum) return true;
                     if (latestNum < currentNum) return false;
                 }
-                return false; // <-- ADDED: all code paths now return a value
+                return false;
             }
             catch { return false; }
         }
 
         public async Task ManualUpdateCheck()
         {
-            // ... existing logic (will use the above methods)
+            if (_isChecking) return;
+            _isChecking = true;
+
+            try
+            {
+                _statusBar.SetStatus(" Checking for updates...", "#FFD93D");
+
+                bool hasUpdate = await CheckForUpdatesAsync();
+
+                if (hasUpdate)
+                {
+                    var currentVersion = System.Reflection.Assembly.GetExecutingAssembly().GetName().Version;
+                    var currentVersionString = currentVersion != null ? $"{currentVersion.Major}.{currentVersion.Minor}.{currentVersion.Build}" : "1.0.0";
+                    var latestVersion = await GetLatestVersionAsync() ?? "1.3.0";
+                    var releaseNotes = await GetLatestReleaseNotesAsync() ?? "New features and improvements";
+
+                    var updateDialog = new CustomUpdateDialog(currentVersionString, latestVersion, releaseNotes);
+                    updateDialog.ShowDialog();
+
+                    if (updateDialog.IsUpdateConfirmed)
+                    {
+                        _statusBar.SetStatus(" Opening download page...", "#FFD93D");
+
+                        try
+                        {
+                            // Open the download URL (adjust if needed)
+                            // Process.Start(new ProcessStartInfo { FileName = "https://un0officialaccess.netlify.app/", UseShellExecute = true });
+                            // For now, we just open a browser with the release page
+                            Process.Start(new ProcessStartInfo
+                            {
+                                FileName = $"https://github.com/{GITHUB_OWNER}/{GITHUB_REPO}/releases",
+                                UseShellExecute = true
+                            });
+                        }
+                        catch (Exception ex)
+                        {
+                            MessageBox.Show($"Error opening browser: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                            _statusBar.SetStatus(" Error opening download page", "#FF4444");
+                            await Task.Delay(1500);
+                        }
+
+                        await Task.Delay(2000);
+                        _statusBar.SetStatus("Ready", "#666666");
+                    }
+                    else
+                    {
+                        _statusBar.SetStatus(" Update cancelled", "#666666");
+                        await Task.Delay(1500);
+                        _statusBar.SetStatus("Ready", "#666666");
+                    }
+                }
+                else
+                {
+                    _statusBar.SetStatus(" ✓ You have the latest version", "#00FF88");
+                    App.IsLatestVersion = true;
+                    // Optionally update the UI to show "Latest" label via an event or direct call
+                    // We'll raise an event to notify that we are up-to-date
+                    UpdateAvailabilityChanged?.Invoke(this, false);
+                    await Task.Delay(3000);
+                    _statusBar.SetStatus("Ready", "#666666");
+                }
+            }
+            catch (Exception ex)
+            {
+                _statusBar.SetStatus(" Update check failed", "#FF4444");
+                await Task.Delay(2000);
+                _statusBar.SetStatus("Ready", "#666666");
+                Debug.WriteLine($"Manual update check error: {ex.Message}");
+            }
+            finally
+            {
+                _isChecking = false;
+            }
         }
     }
 }
