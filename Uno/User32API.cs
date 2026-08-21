@@ -20,6 +20,9 @@ namespace Un0
         [DllImport("user32.dll", SetLastError = true)]
         public static extern bool FlashWindow(IntPtr hwnd, bool bInvert);
 
+        [DllImport("user32.dll", SetLastError = true)]
+        public static extern bool GetWindowRect(IntPtr hWnd, out RECT lpRect);
+
         public const int SW_RESTORE = 9;
         public const int SW_SHOW = 5;
     }
