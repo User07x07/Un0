@@ -98,6 +98,40 @@ dotnet build -c Release
 
 ---
 
+## Publish from the terminal
+
+The version comes from `version.json` through Nerdbank.GitVersioning, so run these commands **from the repo root** and let git stamp the number — no version flag to type by hand.
+
+**1. Framework-dependent** — small download, needs the .NET 8 Desktop Runtime on the target PC:
+
+```powershell
+dotnet publish Uno/Un0.csproj -c Release -r win-x64 --self-contained false -o publish
+```
+
+**2. Self-contained single file** — bigger, but runs on a PC with nothing installed:
+
+```powershell
+dotnet publish Uno/Un0.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -o publish
+```
+
+**3. Check it before you ship it** — the exe is in `publish\Un0.exe`; double-click it once and confirm the title bar shows the right version:
+
+```powershell
+Start-Process .\publish\Un0.exe
+```
+
+**4. Zip it for GitHub Releases** — Un0 looks for updates on GitHub Releases, so the file has to be uploaded there with a tag that matches `version.json`:
+
+```powershell
+Compress-Archive -Path publish\* -DestinationPath Un0-v1.7.0-win-x64.zip -Force
+```
+
+**5. Upload it** — on GitHub open **Releases → Draft a new release**, tag it `v1.7.0`, attach `Un0-v1.7.0-win-x64.zip`, then publish.
+
+> Bump `version.json` first when you ship a new build, and use the same number in the tag and the zip name. If the tag and `version.json` disagree, the in-app update check will not line up.
+
+---
+
 ## Controls
 
 | Key / Button | Action |
