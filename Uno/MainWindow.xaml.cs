@@ -21,6 +21,8 @@ namespace Un0
         private UpdateService _updateService;
         private FullscreenService _fullscreenService;
         private NavigationService _navigationService;
+        private ConnectingOverlayService _connectingOverlay = new ConnectingOverlayService();
+        private InternetPingService _pingService;
 
         // ----- UI state (still in main form) -----
         private bool _isLoaded = false;
@@ -45,6 +47,7 @@ namespace Un0
                 _webViewManager
             );
             _navigationService = new NavigationService(_webViewManager, BackButton, _statusBar);
+            _pingService = new InternetPingService(PingLabel);
 
             // Wire events from services to UI updates
             _webViewManager.ContainsFullscreenElementChanged += (s, isFullscreen) =>
@@ -91,7 +94,14 @@ namespace Un0
                     "Un0_Cache"
                 );
 
+                _connectingOverlay.Show(WebViewContainer);
+
                 await _webViewManager.InitializeAsync(userDataFolder);
+
+                // Load the Hagezi blocklists. The saved copy in the temp folder makes this instant;
+                // newer lists are fetched in the background afterwards.
+                var blocklistTask = _adBlocker.LoadBlocklistsAsync();
+                await Task.WhenAny(blocklistTask, Task.Delay(2500));
 
                 // Inject scripts
                 await _webViewManager.InjectScriptAsync(_adBlocker.GetAdBlockScript());
@@ -100,6 +110,10 @@ namespace Un0
                 // Navigate to home
                 _webViewManager.NavigateTo("https://mainframe2003.netlify.app/");
                 _statusBar.SetStatus("Ready", "#666666");
+                _webViewManager.NavigationCompleted += (s, ev) => Dispatcher.Invoke(() => _connectingOverlay.Hide());
+
+                // Start the internet ping check
+                _pingService.Start();
 
                 // Update protection status
                 _protectionStatus.UpdateProtectionStatus(0);

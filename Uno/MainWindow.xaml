@@ -144,8 +144,10 @@
         <Border x:Name="StatusBarBorder" Grid.Row="2" Background="#0A0A0A" Height="32" 
         BorderBrush="#1A1A1A" BorderThickness="0,1,0,0">
             <DockPanel>
-                <!-- Left side - Status -->
+                <!-- Left side - Ready | Protected | Ping -->
                 <StackPanel Orientation="Horizontal" DockPanel.Dock="Left">
+
+                    <!-- 1. Ready -->
                     <TextBlock x:Name="StatusLabel" Text=" Ready" 
                        Foreground="#666666" VerticalAlignment="Center" Margin="15,0,0,0"
                        FontSize="12" FontFamily="Segoe UI"/>
@@ -153,30 +155,41 @@
                     <TextBlock x:Name="UpdateStatusIcon" Text="⚠️" Foreground="#FF4444" 
                        FontSize="12" VerticalAlignment="Center" Margin="5,0,0,0" 
                        Visibility="Collapsed"/>
+
+                    <!-- Separator -->
+                    <Border Width="1" Height="12" Background="#262626"
+                            VerticalAlignment="Center" Margin="12,0,12,0"/>
+
+                    <!-- 2. Protected -->
+                    <TextBlock x:Name="ProtectionIcon" Text="🛡️" 
+                       Foreground="#00FF88" VerticalAlignment="Center" 
+                       FontSize="12" Margin="0,0,6,0"/>
+                    <TextBlock x:Name="ProtectionLabel" Text="Protected: 0" 
+                       Foreground="#00FF88" VerticalAlignment="Center" 
+                       FontSize="12" FontFamily="Segoe UI" FontWeight="SemiBold"/>
+
+                    <!-- Separator -->
+                    <Border Width="1" Height="12" Background="#262626"
+                            VerticalAlignment="Center" Margin="12,0,12,0"/>
+
+                    <!-- 3. Ping -->
+                    <TextBlock x:Name="PingLabel" Text="Ping: --" 
+                       Foreground="#666666" VerticalAlignment="Center" 
+                       FontSize="12" FontFamily="Segoe UI"
+                       ToolTip="Internet ping (time to reach the internet)"/>
                 </StackPanel>
+
+                <!-- 4. Right side - Keyboard Shortcut Hint -->
+                <TextBlock x:Name="FullscreenHint" Text="Press 'F' to Toggle Fullscreen" 
+                   Foreground="#444444" VerticalAlignment="Center" 
+                   FontSize="10" FontFamily="Segoe UI"
+                   DockPanel.Dock="Right" Margin="0,0,15,0"/>
 
                 <!-- Center - Update Warning Label (prominent warning) -->
                 <TextBlock x:Name="UpdateWarningLabel" Text="⚠️ Please Update to the Latest Version" 
                    Foreground="#FF4444" VerticalAlignment="Center" 
                    FontSize="11" FontFamily="Segoe UI" FontWeight="SemiBold"
-                   HorizontalAlignment="Center" DockPanel.Dock="Left"
-                   Margin="20,0,0,0" Visibility="Collapsed"/>
-
-                <!-- Right side - Protection Status -->
-                <StackPanel Orientation="Horizontal" DockPanel.Dock="Right" Margin="0,0,15,0">
-                    <TextBlock x:Name="ProtectionIcon" Text="🛡️" 
-                       Foreground="#00FF88" VerticalAlignment="Center" 
-                       FontSize="14" Margin="0,0,8,0"/>
-                    <TextBlock x:Name="ProtectionLabel" Text="Protected: 0" 
-                       Foreground="#00FF88" VerticalAlignment="Center" 
-                       FontSize="12" FontFamily="Segoe UI" FontWeight="SemiBold"/>
-
-                    <!-- Keyboard Shortcut Hint -->
-                    <TextBlock x:Name="FullscreenHint" Text="Press 'F' to Toggle Fullscreen" 
-                       Foreground="#444444" VerticalAlignment="Center" 
-                       FontSize="10" FontFamily="Segoe UI"
-                       Margin="15,0,0,0"/>
-                </StackPanel>
+                   HorizontalAlignment="Center" Margin="20,0,0,0" Visibility="Collapsed"/>
             </DockPanel>
         </Border>
 

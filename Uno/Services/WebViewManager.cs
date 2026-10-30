@@ -28,6 +28,10 @@ namespace Un0.Services
         public event EventHandler<CoreWebView2NavigationCompletedEventArgs> NavigationCompleted;
         public event EventHandler<WebMessageEventArgs> WebMessageReceived;   // Changed to custom
         public event EventHandler<bool> ContainsFullscreenElementChanged;
+        public event EventHandler RequestBlocked;
+
+        // Set by the ad blocker: returns true when a sub-request (script, image, video ad, tracker) should be blocked
+        public Func<Uri, bool> ShouldBlockRequest { get; set; }
 
         public WebViewManager(WebView2 webView, Panel container, ProgressBar progressBar)
         {
@@ -75,6 +79,24 @@ namespace Un0.Services
             {
                 _loadProgressBar.Visibility = Visibility.Collapsed;
                 NavigationCompleted?.Invoke(this, e);
+            };
+
+            // Block ad and tracker requests from the blocklist (the main page itself is never blocked)
+            _webView.CoreWebView2.AddWebResourceRequestedFilter("*", CoreWebView2WebResourceContext.All);
+            _webView.CoreWebView2.WebResourceRequested += (s, e) =>
+            {
+                if (e.ResourceContext == CoreWebView2WebResourceContext.Document)
+                    return;
+                if (ShouldBlockRequest == null)
+                    return;
+                if (!Uri.TryCreate(e.Request.Uri, UriKind.Absolute, out Uri uri))
+                    return;
+
+                if (ShouldBlockRequest(uri))
+                {
+                    e.Response = _webView.CoreWebView2.Environment.CreateWebResourceResponse(null, 403, "Blocked", "");
+                    RequestBlocked?.Invoke(this, EventArgs.Empty);
+                }
             };
         }
 

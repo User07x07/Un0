@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Threading.Tasks;
 
 namespace Un0.Services
 {
@@ -7,6 +8,7 @@ namespace Un0.Services
         private WebViewManager _webViewManager;
         private ProtectionStatusService _protectionStatus;
         private int _adBlockCounter = 0;
+        private HageziBlocklistService _hagezi = new HageziBlocklistService();
 
         public event EventHandler<int> AdBlocked;
 
@@ -16,7 +18,21 @@ namespace Un0.Services
             _protectionStatus = protectionStatus;
             // Subscribe to WebView's WebMessageReceived to catch ad_blocked messages
             _webViewManager.WebMessageReceived += OnWebMessageReceived;
+
+            // Block requests whose web address is on the Hagezi lists, and count them
+            _webViewManager.ShouldBlockRequest = uri => _hagezi.IsBlocked(uri);
+            _webViewManager.RequestBlocked += (s, e) =>
+            {
+                _adBlockCounter++;
+                _protectionStatus.UpdateProtectionStatus(_adBlockCounter);
+                AdBlocked?.Invoke(this, _adBlockCounter);
+            };
         }
+
+        // Downloads the Hagezi blocklists. Call once at start-up.
+        public Task LoadBlocklistsAsync() => _hagezi.LoadAsync();
+
+        public bool BlocklistsReady => _hagezi.IsReady;
 
         private void OnWebMessageReceived(object sender, WebMessageEventArgs e)
         {
