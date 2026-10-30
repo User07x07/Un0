@@ -6,10 +6,10 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-v1.11.0-00FF88?style=flat-square&labelColor=0A0A0A" alt="Version">
-  <img src="https://img.shields.io/badge/platform-Windows%2011%20%7C%2010-00FF88?style=flat-square&labelColor=0A0A0A" alt="Platform">
-  <img src="https://img.shields.io/badge/.NET-8.0-00FF88?style=flat-square&labelColor=0A0A0A" alt=".NET 8">
-  <img src="https://img.shields.io/badge/engine-WebView2-00FF88?style=flat-square&labelColor=0A0A0A" alt="WebView2">
+  <img src="https://img.shields.io/badge/version-v1.11.0-004e2a?style=flat-square&labelColor=0A0A0A" alt="Version">
+  <img src="https://img.shields.io/badge/platform-Windows%2011%20%7C%2010-004e2a?style=flat-square&labelColor=0A0A0A" alt="Platform">
+  <img src="https://img.shields.io/badge/.NET-8.0-004e2a?style=flat-square&labelColor=0A0A0A" alt=".NET 8">
+  <img src="https://img.shields.io/badge/engine-WebView2-004e2a?style=flat-square&labelColor=0A0A0A" alt="WebView2">
 </p>
 
 ---
