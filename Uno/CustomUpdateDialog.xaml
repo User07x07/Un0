@@ -5,174 +5,183 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         mc:Ignorable="d"
         Title="Update Available"
-        Height="380"
-        Width="450"
+        Width="460"
+        SizeToContent="Height"
+        MaxHeight="640"
         WindowStartupLocation="CenterOwner"
         WindowStyle="None"
         ResizeMode="NoResize"
-        Background="#0A0A0A"
+        Background="Transparent"
         AllowsTransparency="True"
-        BorderBrush="#1A1A1A"
-        BorderThickness="1"
         Topmost="True">
 
-	<Grid>
-		<!-- Main Border -->
-		<Border CornerRadius="12" Background="#141414" BorderBrush="#2A2A2A" BorderThickness="1">
-			<Grid Margin="30,25,30,25">
-				<Grid.RowDefinitions>
-					<RowDefinition Height="Auto"/>
-					<RowDefinition Height="Auto"/>
-					<RowDefinition Height="Auto"/>
-					<RowDefinition Height="Auto"/>
-					<RowDefinition Height="Auto"/>
-					<RowDefinition Height="Auto"/>
-					<RowDefinition Height="Auto"/>
-				</Grid.RowDefinitions>
+	<Border CornerRadius="14"
+	        Background="#121212"
+	        BorderBrush="#2A2A2A"
+	        BorderThickness="1">
+		<Grid Margin="28,24,28,24">
+			<Grid.RowDefinitions>
+				<RowDefinition Height="Auto"/>
+				<RowDefinition Height="Auto"/>
+				<RowDefinition Height="Auto"/>
+				<RowDefinition Height="Auto"/>
+				<RowDefinition Height="Auto"/>
+				<RowDefinition Height="Auto"/>
+			</Grid.RowDefinitions>
 
-				<!-- Close Button --><!--
-				<Button x:Name="CloseButton"
-                        Grid.Row="0"
-                        Content="✕"
-                        Width="30"
-                        Height="30"
-                        Background="Transparent"
-                        Foreground="#666666"
-                        BorderThickness="0"
-                        FontSize="16"
-                        Cursor="Hand"
-                        HorizontalAlignment="Left"
-                        VerticalAlignment="Top"
-                        Margin="366,-10,0,0"
-                        Click="CloseButton_Click"
-                        MouseEnter="CloseButton_MouseEnter"
-                        MouseLeave="CloseButton_MouseLeave"/>-->
+			<!-- Icon -->
+			<Border Grid.Row="0"
+			        Width="56"
+			        Height="56"
+			        CornerRadius="28"
+			        Background="#00FF88"
+			        HorizontalAlignment="Center"
+			        Margin="0,0,0,14">
+				<TextBlock Text="⬇"
+				           FontSize="26"
+				           Foreground="#0A0A0A"
+				           HorizontalAlignment="Center"
+				           VerticalAlignment="Center"/>
+			</Border>
 
-				<!-- Icon -->
-				<Border Grid.Row="1"
-                        Width="60"
-                        Height="60"
-                        CornerRadius="30"
-                        Background="#00FF88"
-                        HorizontalAlignment="Center"
-                        Margin="0,0,0,12">
-					<TextBlock Text="⬇"
-                               FontSize="28"
-                               Foreground="#0A0A0A"
-                               HorizontalAlignment="Center"
-                               VerticalAlignment="Center"/>
-				</Border>
+			<!-- Title -->
+			<TextBlock Grid.Row="1"
+			           Text="UPDATE AVAILABLE"
+			           FontSize="19"
+			           FontWeight="Bold"
+			           Foreground="#00FF88"
+			           HorizontalAlignment="Center"
+			           Margin="0,0,0,6"/>
 
-				<!-- Title -->
-				<TextBlock Grid.Row="2"
-                           Text="UPDATE AVAILABLE"
-                           FontSize="20"
-                           FontWeight="Bold"
-                           Foreground="#00FF88"
-                           HorizontalAlignment="Center"
-                           Margin="0,0,0,8"/>
+			<!-- Subtitle -->
+			<TextBlock Grid.Row="2"
+			           Text="A new version of Un0 is ready"
+			           FontSize="12"
+			           Foreground="#8A8A8A"
+			           HorizontalAlignment="Center"
+			           Margin="0,0,0,18"
+			           TextWrapping="Wrap"
+			           TextAlignment="Center"/>
 
-				<!-- Subtitle -->
-				<TextBlock Grid.Row="3"
-                           Text="A new version is ready for download"
-                           FontSize="13"
-                           Foreground="#AAAAAA"
-                           HorizontalAlignment="Center"
-                           Margin="0,0,0,15"
-                           TextWrapping="Wrap"
-                           TextAlignment="Center"/>
+			<!-- Version Info -->
+			<Border Grid.Row="3"
+			        Background="#1A1A1A"
+			        CornerRadius="8"
+			        Padding="16,12"
+			        Margin="0,0,0,14"
+			        BorderBrush="#252525"
+			        BorderThickness="1">
+				<Grid>
+					<Grid.ColumnDefinitions>
+						<ColumnDefinition Width="*"/>
+						<ColumnDefinition Width="Auto"/>
+						<ColumnDefinition Width="*"/>
+					</Grid.ColumnDefinitions>
 
-				<!-- Version Info -->
-				<Border Grid.Row="4"
-                        Background="#1A1A1A"
-                        CornerRadius="8"
-                        Padding="15,12"
-                        Margin="0,0,0,15"
-                        BorderBrush="#2A2A2A"
-                        BorderThickness="1">
-					<Grid>
-						<Grid.ColumnDefinitions>
-							<ColumnDefinition Width="*"/>
-							<ColumnDefinition Width="Auto"/>
-							<ColumnDefinition Width="*"/>
-						</Grid.ColumnDefinitions>
+					<!-- Current Version -->
+					<StackPanel Grid.Column="0" HorizontalAlignment="Center">
+						<TextBlock Text="CURRENT"
+						           FontSize="10"
+						           Foreground="#5C5C5C"
+						           HorizontalAlignment="Center"
+						           Margin="0,0,0,3"/>
+						<TextBlock x:Name="CurrentVersionText"
+						           Text="v1.0.0"
+						           FontSize="15"
+						           FontWeight="SemiBold"
+						           Foreground="#8A8A8A"
+						           HorizontalAlignment="Center"/>
+					</StackPanel>
 
-						<!-- Current Version -->
-						<StackPanel Grid.Column="0" HorizontalAlignment="Center">
-							<TextBlock Text="Current"
-                                       FontSize="11"
-                                       Foreground="#666666"
-                                       HorizontalAlignment="Center"/>
-							<TextBlock x:Name="CurrentVersionText"
-                                       Text="v1.2.0"
-                                       FontSize="16"
-                                       FontWeight="SemiBold"
-                                       Foreground="#888888"
-                                       HorizontalAlignment="Center"/>
-						</StackPanel>
+					<!-- Arrow -->
+					<TextBlock Grid.Column="1"
+					           Text="→"
+					           FontSize="16"
+					           Foreground="#00FF88"
+					           VerticalAlignment="Center"
+					           Margin="14,6,14,0"/>
 
-						<!-- Arrow -->
-						<TextBlock Grid.Column="1"
-                                   Text="→"
-                                   FontSize="18"
-                                   Foreground="#00FF88"
-                                   VerticalAlignment="Center"
-                                   Margin="15,0,15,0"/>
+					<!-- Latest Version -->
+					<StackPanel Grid.Column="2" HorizontalAlignment="Center">
+						<TextBlock Text="LATEST"
+						           FontSize="10"
+						           Foreground="#5C5C5C"
+						           HorizontalAlignment="Center"
+						           Margin="0,0,0,3"/>
+						<TextBlock x:Name="LatestVersionText"
+						           Text="v1.0.0"
+						           FontSize="15"
+						           FontWeight="SemiBold"
+						           Foreground="#00FF88"
+						           HorizontalAlignment="Center"/>
+					</StackPanel>
+				</Grid>
+			</Border>
 
-						<!-- Latest Version -->
-						<StackPanel Grid.Column="2" HorizontalAlignment="Center">
-							<TextBlock Text="Latest"
-                                       FontSize="11"
-                                       Foreground="#666666"
-                                       HorizontalAlignment="Center"/>
-							<TextBlock x:Name="LatestVersionText"
-                                       Text="v1.3.0"
-                                       FontSize="16"
-                                       FontWeight="SemiBold"
-                                       Foreground="#00FF88"
-                                       HorizontalAlignment="Center"/>
-						</StackPanel>
-					</Grid>
-				</Border>
+			<!-- Release Notes -->
+			<Border Grid.Row="4"
+			        Background="#1A1A1A"
+			        CornerRadius="8"
+			        Padding="16,14"
+			        Margin="0,0,0,18"
+			        BorderBrush="#252525"
+			        BorderThickness="1">
+				<StackPanel>
+					<TextBlock Text="WHAT'S NEW"
+					           FontSize="10"
+					           FontWeight="SemiBold"
+					           Foreground="#00FF88"
+					           Margin="0,0,0,9"/>
 
-				<!-- Release Notes -->
-				<StackPanel Grid.Row="5" Margin="0,0,0,15">
-					<TextBlock x:Name="ReleaseNotesText"
-                               Text="• Added Volume Booster"
-                               FontSize="12"
-                               Foreground="#AAAAAA"
-                               HorizontalAlignment="Center"
-                               TextWrapping="Wrap"
-                               TextAlignment="Center"
-                               MaxWidth="380"/>
+					<ScrollViewer MaxHeight="168"
+					              VerticalScrollBarVisibility="Auto"
+					              HorizontalScrollBarVisibility="Disabled"
+					              Focusable="False">
+						<TextBlock x:Name="ReleaseNotesText"
+						           Text="• Bug fixes and performance improvements"
+						           FontSize="12"
+						           Foreground="#B5B5B5"
+						           TextWrapping="Wrap"
+						           TextAlignment="Left"
+						           HorizontalAlignment="Stretch"
+						           LineHeight="20"
+						           LineStackingStrategy="BlockLineHeight"/>
+					</ScrollViewer>
 				</StackPanel>
+			</Border>
 
-				<!-- Update Button -->
-				<StackPanel Grid.Row="6"
-                            Orientation="Horizontal"
-                            HorizontalAlignment="Center"
-                            Margin="0,0,0,0">
-					<Button x:Name="UpdateButton"
-                            Content="Update Now"
-                            Width="160"
-                            Height="42"
-                            FontSize="14"
-                            FontWeight="SemiBold"
-                            Background="#00FF88"
-                            Foreground="#0A0A0A"
-                            BorderThickness="0"
-                            Cursor="Hand"
-                            Click="UpdateButton_Click"
-                            MouseEnter="Button_MouseEnter"
-                            MouseLeave="Button_MouseLeave">
-						<Button.Resources>
-							<Style TargetType="Border">
-								<Setter Property="CornerRadius" Value="8"/>
-							</Style>
-						</Button.Resources>
-					</Button>
-				</StackPanel>
-			</Grid>
-		</Border>
-	</Grid>
+			<!-- Update Button -->
+			<Button x:Name="UpdateButton"
+			        Grid.Row="5"
+			        Content="Update Now"
+			        Height="46"
+			        HorizontalAlignment="Stretch"
+			        FontSize="14"
+			        FontWeight="SemiBold"
+			        Background="#00FF88"
+			        Foreground="#0A0A0A"
+			        BorderThickness="0"
+			        Cursor="Hand"
+			        Click="UpdateButton_Click">
+				<Button.Template>
+					<ControlTemplate TargetType="Button">
+						<Border x:Name="ButtonBorder"
+						        Background="{TemplateBinding Background}"
+						        CornerRadius="8">
+							<ContentPresenter HorizontalAlignment="Center"
+							                  VerticalAlignment="Center"/>
+						</Border>
+						<ControlTemplate.Triggers>
+							<Trigger Property="IsMouseOver" Value="True">
+								<Setter TargetName="ButtonBorder" Property="Background" Value="#00E07A"/>
+							</Trigger>
+							<Trigger Property="IsPressed" Value="True">
+								<Setter TargetName="ButtonBorder" Property="Background" Value="#00B863"/>
+							</Trigger>
+						</ControlTemplate.Triggers>
+					</ControlTemplate>
+				</Button.Template>
+			</Button>
+		</Grid>
+	</Border>
 </Window>

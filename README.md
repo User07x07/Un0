@@ -6,7 +6,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-v1.8.0-00FF88?style=flat-square&labelColor=0A0A0A" alt="Version">
+  <img src="https://img.shields.io/badge/version-v1.11.0-00FF88?style=flat-square&labelColor=0A0A0A" alt="Version">
   <img src="https://img.shields.io/badge/platform-Windows%2011%20%7C%2010-00FF88?style=flat-square&labelColor=0A0A0A" alt="Platform">
   <img src="https://img.shields.io/badge/.NET-8.0-00FF88?style=flat-square&labelColor=0A0A0A" alt=".NET 8">
   <img src="https://img.shields.io/badge/engine-WebView2-00FF88?style=flat-square&labelColor=0A0A0A" alt="WebView2">
@@ -123,10 +123,10 @@ Start-Process .\publish\Un0.exe
 **4. Zip it for GitHub Releases** — Un0 looks for updates on GitHub Releases, so the file has to be uploaded there with a tag that matches `version.json`:
 
 ```powershell
-Compress-Archive -Path publish\* -DestinationPath Un0-v1.8.0-win-x64.zip -Force
+Compress-Archive -Path publish\* -DestinationPath Un0-v1.11.0-win-x64.zip -Force
 ```
 
-**5. Upload it** — on GitHub open **Releases → Draft a new release**, tag it `v1.8.0`, attach `Un0-v1.8.0-win-x64.zip`, then publish.
+**5. Upload it** — on GitHub open **Releases → Draft a new release**, tag it `v1.11.0`, attach `Un0-v1.11.0-win-x64.zip`, then publish.
 
 > Bump `version.json` first when you ship a new build, and use the same number in the tag and the zip name. If the tag and `version.json` disagree, the in-app update check will not line up.
 

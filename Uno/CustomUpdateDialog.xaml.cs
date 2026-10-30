@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Windows;
 using System.Windows.Controls;
@@ -22,44 +23,126 @@ namespace Un0
             CurrentVersionText.Text = $"v{currentVersion}";
             LatestVersionText.Text = $"v{latestVersion}";
 
-            // Set release notes - properly formatted with bullet points
-            if (!string.IsNullOrEmpty(releaseNotes) && releaseNotes != "No release notes available.")
+            // Set release notes - turn GitHub markdown into a plain bullet list
+            ReleaseNotesText.Text = FormatReleaseNotes(releaseNotes);
+        }
+
+        /// <summary>
+        /// Turns a raw GitHub release body (markdown) into a clean bullet list:
+        /// headings become labels, list items become bullets, inline markers are removed.
+        /// </summary>
+        private static string FormatReleaseNotes(string releaseNotes)
+        {
+            const string fallback = "• Bug fixes and performance improvements";
+
+            if (string.IsNullOrWhiteSpace(releaseNotes) ||
+                releaseNotes.Trim() == "No release notes available.")
             {
-                // Clean up release notes - remove any existing bullet symbols
-                var cleanNotes = releaseNotes.Replace("•", "").Trim();
+                return fallback;
+            }
 
-                // Split by newlines or periods for multiple items
-                var items = cleanNotes.Split(new[] { '\n', '\r', '.' }, StringSplitOptions.RemoveEmptyEntries);
+            var lines = new List<string>();
 
-                if (items.Length > 1)
+            foreach (var rawLine in releaseNotes.Replace("\r\n", "\n").Split('\n'))
+            {
+                var line = rawLine.Trim();
+                if (line.Length == 0)
                 {
-                    // Multiple items - show as list
-                    string formattedNotes = "";
-                    for (int i = 0; i < Math.Min(items.Length, 3); i++)
+                    continue;
+                }
+
+                // Skip horizontal rules and HTML/markdown noise
+                if (line.StartsWith("---") || line.StartsWith("***") ||
+                    line.StartsWith("<img") || line.StartsWith("![") ||
+                    line.StartsWith("[![") || line.StartsWith("<!--"))
+                {
+                    continue;
+                }
+
+                // Headings: keep the words as a label, no hashes
+                if (line.StartsWith("#"))
+                {
+                    var heading = CleanInline(line.TrimStart('#').Trim()).TrimEnd(':');
+                    if (heading.Length > 0)
                     {
-                        if (!string.IsNullOrWhiteSpace(items[i]))
+                        // Blank line before a new group, so groups read apart
+                        if (lines.Count > 1 && lines[lines.Count - 1].Length > 0)
                         {
-                            formattedNotes += $"• {items[i].Trim()}\n";
+                            lines.Add(string.Empty);
                         }
+
+                        lines.Add(heading.ToUpperInvariant());
                     }
-                    ReleaseNotesText.Text = formattedNotes.TrimEnd('\n');
-                }
-                else
-                {
-                    // Single item
-                    ReleaseNotesText.Text = $"• {cleanNotes}";
+                    continue;
                 }
 
-                // Truncate if too long
-                if (ReleaseNotesText.Text.Length > 200)
+                // List items: - * + or 1.
+                bool isListItem = line.StartsWith("- ") || line.StartsWith("* ") || line.StartsWith("+ ");
+                if (!isListItem)
                 {
-                    ReleaseNotesText.Text = ReleaseNotesText.Text.Substring(0, 200) + "...";
+                    var numbered = System.Text.RegularExpressions.Regex.Match(line, @"^\d+\.\s+");
+                    if (numbered.Success)
+                    {
+                        line = line.Substring(numbered.Length);
+                        isListItem = true;
+                    }
                 }
+
+                if (isListItem)
+                {
+                    line = line.Substring(2).Trim();
+                }
+
+                var text = CleanInline(line);
+                if (text.Length == 0)
+                {
+                    continue;
+                }
+
+                lines.Add("• " + text);
             }
-            else
+
+            if (lines.Count == 0)
             {
-                ReleaseNotesText.Text = "• Bug fixes and performance improvements";
+                return fallback;
             }
+
+            // Keep the card compact: at most 8 content lines plus group labels
+            while (lines.Count > 10)
+            {
+                lines.RemoveAt(lines.Count - 1);
+            }
+
+            return string.Join("\n", lines).Trim();
+        }
+
+        /// <summary>
+        /// Removes inline markdown (bold, italic, code, links) from one line.
+        /// </summary>
+        private static string CleanInline(string text)
+        {
+            if (string.IsNullOrWhiteSpace(text))
+            {
+                return string.Empty;
+            }
+
+            var result = text;
+
+            // Links: [label](url) -> label
+            result = System.Text.RegularExpressions.Regex.Replace(result, @"\[([^\]]+)\]\([^)]*\)", "$1");
+
+            // Bold / italic / strikethrough / inline code markers
+            result = result.Replace("**", string.Empty)
+                           .Replace("__", string.Empty)
+                           .Replace("~~", string.Empty)
+                           .Replace("`", string.Empty);
+
+            result = result.Trim('*', '_', '•', ' ');
+
+            // Collapse repeated spaces
+            result = System.Text.RegularExpressions.Regex.Replace(result, @"\s{2,}", " ");
+
+            return result.Trim();
         }
 
         private void UpdateButton_Click(object sender, RoutedEventArgs e)

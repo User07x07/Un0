@@ -47,6 +47,18 @@ namespace Un0.Services
             var env = await CoreWebView2Environment.CreateAsync(null, userDataFolder, options);
             await _webView.EnsureCoreWebView2Async(env);
 
+            // Right‑click is off and developer tools cannot be opened:
+            // no default context menu, no DevTools, and no F12 / Ctrl+Shift+I shortcuts.
+            _webView.CoreWebView2.Settings.AreDefaultContextMenusEnabled = false;
+            _webView.CoreWebView2.Settings.AreDevToolsEnabled = false;
+            _webView.CoreWebView2.Settings.AreBrowserAcceleratorKeysEnabled = false;
+
+            // Belt and braces: if a page still raises a context menu request, swallow it.
+            _webView.CoreWebView2.ContextMenuRequested += (s, e) => e.Handled = true;
+
+            // Stop the WPF host from showing its own right‑click menu over the view
+            _webView.ContextMenuOpening += (s, e) => e.Handled = true;
+
             // Subscribe to events
             _webView.CoreWebView2.ContainsFullScreenElementChanged += (s, e) =>
                 ContainsFullscreenElementChanged?.Invoke(this, _webView.CoreWebView2.ContainsFullScreenElement);
