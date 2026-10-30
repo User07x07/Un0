@@ -6,7 +6,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-v1.7.0-00FF88?style=flat-square&labelColor=0A0A0A" alt="Version">
+  <img src="https://img.shields.io/badge/version-v1.8.0-00FF88?style=flat-square&labelColor=0A0A0A" alt="Version">
   <img src="https://img.shields.io/badge/platform-Windows%2011%20%7C%2010-00FF88?style=flat-square&labelColor=0A0A0A" alt="Platform">
   <img src="https://img.shields.io/badge/.NET-8.0-00FF88?style=flat-square&labelColor=0A0A0A" alt=".NET 8">
   <img src="https://img.shields.io/badge/engine-WebView2-00FF88?style=flat-square&labelColor=0A0A0A" alt="WebView2">
@@ -123,10 +123,10 @@ Start-Process .\publish\Un0.exe
 **4. Zip it for GitHub Releases** — Un0 looks for updates on GitHub Releases, so the file has to be uploaded there with a tag that matches `version.json`:
 
 ```powershell
-Compress-Archive -Path publish\* -DestinationPath Un0-v1.7.0-win-x64.zip -Force
+Compress-Archive -Path publish\* -DestinationPath Un0-v1.8.0-win-x64.zip -Force
 ```
 
-**5. Upload it** — on GitHub open **Releases → Draft a new release**, tag it `v1.7.0`, attach `Un0-v1.7.0-win-x64.zip`, then publish.
+**5. Upload it** — on GitHub open **Releases → Draft a new release**, tag it `v1.8.0`, attach `Un0-v1.8.0-win-x64.zip`, then publish.
 
 > Bump `version.json` first when you ship a new build, and use the same number in the tag and the zip name. If the tag and `version.json` disagree, the in-app update check will not line up.
 
@@ -190,6 +190,18 @@ flowchart TD
 ---
 
 ## Roadmap
+
+### Next up — real volume boost
+
+The volume button currently only **changes colour**: browsers cap a video's volume at `100%`, so the `4×` script is rejected and no sound gets louder. Until this is fixed, treat the boost as cosmetic.
+
+- [ ] **Real amplification** — route the page audio through a Web Audio gain stage (or amplify the system stream) so the level actually rises above 100%
+- [ ] **Honest button state** — the icon should only light up when the boost really applied, and fall back to off if it fails
+- [ ] **Survive navigation** — the page-side on/off state resets on every new page, so the button and the audio drift apart; re-apply the boost after each load
+- [ ] **Reach embedded players** — send the boost into YouTube and Vimeo `iframe` frames, not just the top page
+- [ ] **Update the feature table and Controls table** once the boost works for real
+
+### Smaller items
 
 - [ ] Per-site on/off switch
 - [ ] Custom user filters
