@@ -177,8 +177,6 @@ flowchart TD
 
 **Stack:** C# · WPF · .NET 8 (`net8.0-windows`) · Microsoft.Web.WebView2 `1.0.4129.50` · Octokit `14.0.0` · Nerdbank.GitVersioning
 
-**Home page:** [mainframe2003.netlify.app](https://mainframe2003.netlify.app/)
-
 ---
 
 ## Known limits
